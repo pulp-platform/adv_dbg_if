@@ -15,7 +15,7 @@ module adv_dbg_if
 
         // CPU signals
         input  logic [NB_CORES-1:0]        cpu_clk_i,
-        output logic [NB_CORES-1:0] [31:0] cpu_addr_o, 
+        output logic [NB_CORES-1:0] [15:0] cpu_addr_o, 
         input  logic [NB_CORES-1:0] [31:0] cpu_data_i, 
         output logic [NB_CORES-1:0] [31:0] cpu_data_o,
         input  logic [NB_CORES-1:0]        cpu_bp_i,
@@ -142,7 +142,7 @@ adbg_top #(
                 .tck_i(tck_pad_i),
                 .tdi_i(s_tdi),
                 .tdo_o(s_debug_tdo),
-                .rst_i(s_test_logic_reset),
+                .trstn_i(trstn_pad_i),
 
                 // TAP states
                 .shift_dr_i(s_shift_dr),
@@ -154,7 +154,6 @@ adbg_top #(
                 .debug_select_i(s_debug_select),
 
                 // CPU signals
-                .cpu_clk_i(cpu_clk_i),
                 .cpu_addr_o(cpu_addr_o), 
                 .cpu_data_i(cpu_data_i),
                 .cpu_data_o(cpu_data_o),

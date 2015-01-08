@@ -80,10 +80,11 @@ module adbg_or1k_module (
 			 data_register_i,  // the data register is at top level, shared between all modules
 			 module_select_i,
 			 top_inhibit_o,
-			 rst_i,
+			 trstn_i,
 
 			 // Interfate to the OR1K debug unit
 			 cpu_clk_i, 
+			 cpu_rstn_i, 
 			 cpu_addr_o, 
 			 cpu_data_i, 
 			 cpu_data_o,
@@ -108,11 +109,12 @@ module adbg_or1k_module (
    input [52:0]  data_register_i;
    input         module_select_i;
    output        top_inhibit_o;
-   input         rst_i;
+   input         trstn_i;
 
    // Interface to OR1200 debug unit
    input 	 cpu_clk_i;    // 'bus' style interface to SPRs
-   output [31:0] cpu_addr_o;
+   input 	 cpu_rstn_i; 
+   output [15:0] cpu_addr_o;
    input [31:0]  cpu_data_i;
    output [31:0] cpu_data_o;
    output 	 cpu_stb_o;
@@ -190,7 +192,7 @@ module adbg_or1k_module (
    reg [31:0] 			       data_from_internal_reg;  // data from internal reg. MUX to output shift register
    wire 			       status_reg_wr;
 
-
+   wire [31:0]                cpu_addr_o_int;
    /////////////////////////////////////////////////
    // Combinatorial assignments
 
@@ -205,6 +207,7 @@ module adbg_or1k_module (
 `endif   
    assign     reg_select_data = data_register_i[47:(47-(`DBG_OR1K_REGSELECT_SIZE-1))];
 
+    assign cpu_addr_o = cpu_addr_o_int[15:0];
    ////////////////////////////////////////////////
 	      // Operation decoder
 
@@ -226,9 +229,9 @@ module adbg_or1k_module (
    // Module-internal register select register (no, that's not redundant.)
    // Also internal register output MUX
 
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-	if(rst_i) internal_register_select = 1'h0;
+	if(~trstn_i) internal_register_select = 1'h0;
 	else if(regsel_ld_en) internal_register_select = reg_select_data;
      end
 
@@ -258,8 +261,9 @@ module adbg_or1k_module (
 				     .we_i(status_reg_wr),
 				     .tck_i(tck_i),
 				     .bp_i(cpu_bp_i),
-				     .rst_i(rst_i),
+				     .trstn_i(trstn_i),
 				     .cpu_clk_i(cpu_clk_i),
+				     .cpu_rstn_i(cpu_rstn_i),
 				     .ctrl_reg_o(internal_reg_status),
 				     .cpu_stall_o(cpu_stall_o),
 				     .cpu_rst_o(cpu_rst_o)
@@ -274,9 +278,9 @@ module adbg_or1k_module (
 
    // Technically, since this data (sometimes) comes from the input shift reg, we should latch on
    // negedge, per the JTAG spec. But that makes things difficult when incrementing.
-   always @ (posedge tck_i or posedge rst_i)  // JTAG spec specifies latch on negative edge in UPDATE_DR state
+   always @ (posedge tck_i or negedge trstn_i)  // JTAG spec specifies latch on negative edge in UPDATE_DR state
      begin
-	if(rst_i)
+	if(~trstn_i)
 	  address_counter <= 32'h0;
 	else if(addr_ct_en)
 	  address_counter <= data_to_addr_counter;
@@ -285,9 +289,9 @@ module adbg_or1k_module (
    ////////////////////////////////////////
      // Opcode latch
 
-   always @ (posedge tck_i or posedge rst_i)  // JTAG spec specifies latch on negative edge in UPDATE_DR state
+   always @ (posedge tck_i or negedge trstn_i)  // JTAG spec specifies latch on negative edge in UPDATE_DR state
      begin
-	if(rst_i)
+	if(~trstn_i)
 	  operation <= 4'h0;
 	else if(op_reg_en)
 	  operation <= operation_in;
@@ -296,10 +300,10 @@ module adbg_or1k_module (
    //////////////////////////////////////
      // Bit counter
 
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
 
-	if(rst_i)             bit_count <= 6'h0;
+	if(~trstn_i)             bit_count <= 6'h0;
 	else if(bit_ct_rst)  bit_count <= 6'h0;
 	else if(bit_ct_en)    bit_count <= bit_count + 6'h1;
 
@@ -316,9 +320,9 @@ module adbg_or1k_module (
 
    // Technically, since this data (sometimes) comes from the input shift reg, we should latch on
    // negedge, per the JTAG spec. But that makes things difficult when incrementing.
-   always @ (posedge tck_i or posedge rst_i)  // JTAG spec specifies latch on negative edge in UPDATE_DR state
+   always @ (posedge tck_i or negedge trstn_i)  // JTAG spec specifies latch on negative edge in UPDATE_DR state
      begin
-	if(rst_i)
+	if(~trstn_i)
 	  word_count <= 16'h0;
 	else if(word_ct_en)
 	  word_count <= data_to_word_counter;
@@ -331,9 +335,9 @@ module adbg_or1k_module (
 
 			    assign out_reg_data = (out_reg_data_sel) ? data_from_internal_reg : data_from_biu;
 
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-	if(rst_i) data_out_shift_reg <= 32'h0;
+	if(~trstn_i) data_out_shift_reg <= 32'h0;
 	else if(out_reg_ld_en) data_out_shift_reg <= out_reg_data;
 	else if(out_reg_shift_en) data_out_shift_reg <= {1'b0, data_out_shift_reg[31:1]};
      end
@@ -356,7 +360,7 @@ module adbg_or1k_module (
    adbg_or1k_biu or1k_biu_i (
 			     // Debug interface signals
 			     .tck_i           (tck_i),
-			     .rst_i           (rst_i),
+			     .trstn_i         (trstn_i),
 			     .data_i          (data_to_biu),
 			     .data_o          (data_from_biu),
 			     .addr_i          (address_counter),
@@ -367,7 +371,8 @@ module adbg_or1k_module (
 			     
 			     // OR1K SPR bus signals
 			     .cpu_clk_i(cpu_clk_i),
-			     .cpu_addr_o(cpu_addr_o),
+			     .cpu_rstn_i(cpu_rstn_i),
+			     .cpu_addr_o(cpu_addr_o_int),
 			     .cpu_data_i(cpu_data_i),
 			     .cpu_data_o(cpu_data_o),
 			     .cpu_stb_o(cpu_stb_o),
@@ -389,7 +394,7 @@ module adbg_or1k_module (
       .enable(crc_en),
       .shift(crc_shift_en),
       .clr(crc_clr),
-      .rst(rst_i),
+      .rstn(trstn_i),
       .crc_out(crc_data_out),
       .serial_out(crc_serial_out)
       );
@@ -422,9 +427,9 @@ module adbg_or1k_module (
 
 
    // sequential part of the FSM
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-	if(rst_i)
+	if(~trstn_i)
 	  module_state <= `STATE_idle;
 	else
 	  module_state <= module_next_state;

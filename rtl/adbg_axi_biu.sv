@@ -72,7 +72,7 @@ module adbg_axi_biu
         ) (
    // Debug interface signals
 		input  logic                        tck_i,
-		input  logic                        rst_i,
+		input  logic                        trstn_i,
 		input  logic                 [63:0] data_i,
 		output logic                 [63:0] data_o,
 		input  logic                 [31:0] addr_i,
@@ -241,9 +241,9 @@ module adbg_axi_biu
      end
 
    // Latch input data on 'start' strobe, if ready.
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-	if(rst_i) begin
+	if(~trstn_i) begin
 	   sel_reg     <=  'h0;
 	   addr_reg    <=  'h0;
 	   data_in_reg <=  'h0;
@@ -260,16 +260,16 @@ module adbg_axi_biu
 
    // Create toggle-active strobe signal for clock sync.  This will start a transaction
    // on the AXI once the toggle propagates to the FSM in the AXI domain.
-    always @ (posedge tck_i or posedge rst_i)
+    always @ (posedge tck_i or negedge trstn_i)
     begin
-	    if(rst_i) str_sync <= 1'b0;
+	    if(~trstn_i) str_sync <= 1'b0;
 	    else if(strobe_i && rdy_o) str_sync <= ~str_sync;
     end 
 
    // Create rdy_o output.  Set on reset, clear on strobe (if set), set on input toggle
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-	if(rst_i) begin
+	if(~trstn_i) begin
            rdy_sync_tff1 <= 1'b0;
            rdy_sync_tff2 <= 1'b0;
            rdy_sync_tff2q <= 1'b0;

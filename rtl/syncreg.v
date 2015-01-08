@@ -68,7 +68,7 @@
 module syncreg (
                 CLKA,
 		CLKB,
-		RST,
+		RSTN,
                 DATA_IN,
                 DATA_OUT
 		);
@@ -76,7 +76,7 @@ module syncreg (
 
    input   CLKA;
    input   CLKB;
-   input   RST;
+   input   RSTN;
    input   [3:0] DATA_IN;
    output  [3:0] DATA_OUT;
 
@@ -97,9 +97,9 @@ module syncreg (
    assign DATA_OUT = regB;   
  	   
    // register A (latches input any time it changes)
-   always @ (posedge CLKA or posedge RST)
+   always @ (posedge CLKA or negedge RSTN)
      begin
-	if(RST)
+	if(~RSTN)
 	  regA <= 4'b0;
 	else if(A_enable)
 	  regA <= DATA_IN;
@@ -107,9 +107,9 @@ module syncreg (
 
 	   
    // register B (latches data from regA when enabled by the strobe SFF)
-   always @ (posedge CLKB or posedge RST)
+   always @ (posedge CLKB or negedge RSTN)
      begin
-	if(RST)
+	if(~RSTN)
 	  regB <= 4'b0;
 	else if(strobe_sff_out)
 	  regB <= regA;
@@ -117,9 +117,9 @@ module syncreg (
 
 	   
    // 'strobe' toggle FF
-   always @ (posedge CLKA or posedge RST)
+   always @ (posedge CLKA or negedge RSTN)
      begin
-	if(RST)
+	if(~RSTN)
 	  strobe_toggle <= 1'b0;
 	else if(A_enable)
 	  strobe_toggle <= ~strobe_toggle;
@@ -128,9 +128,9 @@ module syncreg (
    
    // 'ack' toggle FF
    // This is set to '1' at reset, to initialize the unit.
-   always @ (posedge CLKB or posedge RST)
+   always @ (posedge CLKB or negedge RSTN)
      begin
-	if(RST)
+	if(~RSTN)
 	  ack_toggle <= 1'b1;
 	else if (strobe_sff_out)
 	  ack_toggle <= ~ack_toggle;
@@ -141,7 +141,7 @@ module syncreg (
 			.DEST_CLK (CLKB),
 			.D_SET (1'b0),
 			.D_RST (strobe_sff_out),
-			.RESET (RST),
+			.RESETN (RSTN),
 			.TOGGLE_IN (strobe_toggle),
 			.D_OUT (strobe_sff_out)
 			);
@@ -151,7 +151,7 @@ module syncreg (
 		     .DEST_CLK (CLKA),
 		     .D_SET (1'b0),
 		     .D_RST (A_enable),
-		     .RESET (RST),
+		     .RESETN (RSTN),
 		     .TOGGLE_IN (ack_toggle),
 		     .D_OUT (ack_sff_out)
 		     );  

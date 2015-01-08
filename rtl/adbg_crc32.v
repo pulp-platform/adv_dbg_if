@@ -49,14 +49,14 @@
 //
 
 
-module adbg_crc32 (clk, data, enable, shift, clr, rst, crc_out, serial_out);
+module adbg_crc32 (clk, data, enable, shift, clr, rstn, crc_out, serial_out);
 
 input         clk;
 input         data;
 input         enable;
 input         shift;
 input         clr;
-input         rst;
+input         rstn;
 output [31:0] crc_out;
 output        serial_out;
 
@@ -101,9 +101,9 @@ assign new_crc[29] = crc[30] ^ data ^ crc[0];
 assign new_crc[30] = crc[31] ^ data ^ crc[0];
 assign new_crc[31] =           data ^ crc[0];
 
-always @ (posedge clk or posedge rst)
+always @ (posedge clk or negedge rstn)
 begin
-  if(rst)
+  if(~rstn)
     crc[31:0] <= 32'hffffffff;
   else if(clr)
     crc[31:0] <= 32'hffffffff;

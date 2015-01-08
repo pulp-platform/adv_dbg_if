@@ -70,8 +70,9 @@ module adbg_or1k_status_reg  (
                               we_i, 
                               tck_i, 
                               bp_i, 
-                              rst_i,
+                              trstn_i,
                               cpu_clk_i, 
+                              cpu_rstn_i, 
                               ctrl_reg_o,
                               cpu_stall_o, 
                               cpu_rst_o 
@@ -82,8 +83,9 @@ module adbg_or1k_status_reg  (
    input 			       we_i;
    input 			       tck_i;
    input 			       bp_i;
-   input 			       rst_i;
+   input 			       trstn_i;
    input 			       cpu_clk_i;
+   input 			       cpu_rstn_i;
 
    output [`DBG_OR1K_STATUS_LEN - 1:0] ctrl_reg_o;
    output 			       cpu_stall_o;
@@ -104,9 +106,9 @@ module adbg_or1k_status_reg  (
    // irregular.  By only allowing bp_i to set (but not reset) the stall_bp
    // signal, we insure that the CPU will remain in the stalled state until
    // the debug host can read the state.
-   always @ (posedge cpu_clk_i or posedge rst_i)
+   always @ (posedge cpu_clk_i or negedge cpu_rstn_i)
      begin
-	if(rst_i)
+	if(~cpu_rstn_i)
 	  stall_bp <= 1'b0;
 	else if(bp_i)
 	  stall_bp <= 1'b1;
@@ -116,9 +118,9 @@ module adbg_or1k_status_reg  (
 
 
    // Synchronizing
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-	if (rst_i)
+	if (~trstn_i)
 	  begin
 	     stall_bp_csff <= 1'b0;
 	     stall_bp_tck  <= 1'b0;
@@ -131,9 +133,9 @@ module adbg_or1k_status_reg  (
      end
 
 
-   always @ (posedge cpu_clk_i or posedge rst_i)
+   always @ (posedge cpu_clk_i or negedge cpu_rstn_i)
      begin
-	if (rst_i)
+	if (~cpu_rstn_i)
 	  begin
 	     stall_reg_csff <= 1'b0;
 	     stall_reg_cpu  <= 1'b0;
@@ -154,9 +156,9 @@ module adbg_or1k_status_reg  (
    // Writing data to the control registers (stall)
    // This can be set either by the debug host, or by
    // a CPU breakpoint.  It can only be cleared by the host.
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-	if (rst_i)
+	if (~trstn_i)
 	  stall_reg <= 1'b0;
 	else if (stall_bp_tck)
 	  stall_reg <= 1'b1;
@@ -166,9 +168,9 @@ module adbg_or1k_status_reg  (
 
 
    // Writing data to the control registers (reset)
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-	if (rst_i)
+	if (~trstn_i)
 	  cpu_reset  <= 1'b0;
 	else if(we_i)
 	  cpu_reset  <= data_i[1];
@@ -176,9 +178,9 @@ module adbg_or1k_status_reg  (
 
 
    // Synchronizing signals from registers
-   always @ (posedge cpu_clk_i or posedge rst_i)
+   always @ (posedge cpu_clk_i or negedge cpu_rstn_i)
      begin
-	if (rst_i)
+	if (~cpu_rstn_i)
 	  begin
 	     cpu_reset_csff      <= 1'b0; 
 	     cpu_rst_o           <= 1'b0; 

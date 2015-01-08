@@ -86,7 +86,7 @@ module adbg_axi_module
 		input  logic [52:0] data_register_i,  // the data register is at top level, shared between all modules
 		input  logic        module_select_i,
 		output logic        top_inhibit_o,
-		input  logic        rst_i,
+		input  logic        trstn_i,
 
 		// AXI4 MASTER
 		//***************************************
@@ -304,9 +304,9 @@ module adbg_axi_module
    // Module-internal register select register (no, that's not redundant.)
    // Also internal register output MUX
 
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-    if(rst_i) internal_register_select = 1'h0;
+    if(~trstn_i) internal_register_select = 1'h0;
     else if(regsel_ld_en) internal_register_select = reg_select_data;
      end
 
@@ -336,9 +336,9 @@ module adbg_axi_module
    // otherwise, we would write the previously selected register.
 
 
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-    if(rst_i) internal_reg_error = 33'h0;
+    if(~trstn_i) internal_reg_error = 33'h0;
     else if(intreg_ld_en && (reg_select_data == `DBG_AXI_INTREG_ERROR))  // do load from data input register
       begin
              if(data_register_i[46]) internal_reg_error[0] = 1'b0;  // if write data is 1, reset the error bit
@@ -363,9 +363,9 @@ module adbg_axi_module
 
    // Technically, since this data (sometimes) comes from the input shift reg, we should latch on
    // negedge, per the JTAG spec. But that makes things difficult when incrementing.
-   always @ (posedge tck_i or posedge rst_i)  // JTAG spec specifies latch on negative edge in UPDATE_DR state
+   always @ (posedge tck_i or negedge trstn_i)  // JTAG spec specifies latch on negative edge in UPDATE_DR state
      begin
-    if(rst_i)
+    if(~trstn_i)
       address_counter <= 32'h0;
     else if(addr_ct_en)
       address_counter <= data_to_addr_counter;
@@ -374,9 +374,9 @@ module adbg_axi_module
    ////////////////////////////////////////
      // Opcode latch
 
-   always @ (posedge tck_i or posedge rst_i)  // JTAG spec specifies latch on negative edge in UPDATE_DR state
+   always @ (posedge tck_i or negedge trstn_i)  // JTAG spec specifies latch on negative edge in UPDATE_DR state
      begin
-    if(rst_i)
+    if(~trstn_i)
       operation <= 4'h0;
     else if(op_reg_en)
       operation <= operation_in;
@@ -385,10 +385,10 @@ module adbg_axi_module
    //////////////////////////////////////
      // Bit counter
 
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
 
-    if(rst_i)             bit_count <= 6'h0;
+    if(~trstn_i)             bit_count <= 6'h0;
     else if(bit_ct_rst)  bit_count <= 6'h0;
     else if(bit_ct_en)    bit_count <= bit_count + 6'h1;
 
@@ -405,9 +405,9 @@ module adbg_axi_module
 
    // Technically, since this data (sometimes) comes from the input shift reg, we should latch on
    // negedge, per the JTAG spec. But that makes things difficult when incrementing.
-   always @ (posedge tck_i or posedge rst_i)  // JTAG spec specifies latch on negative edge in UPDATE_DR state
+   always @ (posedge tck_i or negedge trstn_i)  // JTAG spec specifies latch on negative edge in UPDATE_DR state
      begin
-    if(rst_i)
+    if(~trstn_i)
       word_count <= 16'h0;
     else if(word_ct_en)
       word_count <= data_to_word_counter;
@@ -420,9 +420,9 @@ module adbg_axi_module
 
   assign out_reg_data = (out_reg_data_sel) ? data_from_internal_reg : {1'b0,data_from_biu};
 
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-    if(rst_i) data_out_shift_reg <= 33'h0;
+    if(~trstn_i) data_out_shift_reg <= 33'h0;
     else if(out_reg_ld_en) data_out_shift_reg <= out_reg_data;
     else if(out_reg_shift_en) data_out_shift_reg <= {1'b0, data_out_shift_reg[32:1]};
      end
@@ -442,13 +442,17 @@ module adbg_axi_module
    // latch address, operation, and write data on rising clock edge 
    // when strobe is asserted
 
-   assign biu_rst = rst_i | biu_clr_err;
+   assign biu_rst = trstn_i & ~biu_clr_err;
 
-   adbg_axi_biu axi_biu_i 
-     (
+   adbg_axi_biu #(
+       .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
+       .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
+       .AXI_USER_WIDTH(AXI_USER_WIDTH),
+       .AXI_ID_WIDTH(AXI_ID_WIDTH)
+   ) axi_biu_i (
         // Debug interface signals
         .tck_i           (tck_i),
-        .rst_i           (biu_rst),
+        .trstn_i         (biu_rst),
         .data_i          (data_to_biu),
         .data_o          (data_from_biu),
         .addr_i          (address_counter),
@@ -523,7 +527,7 @@ module adbg_axi_module
       .enable(crc_en),
       .shift(crc_shift_en),
       .clr(crc_clr),
-      .rst(rst_i),
+      .rstn(trstn_i),
       .crc_out(crc_data_out),
       .serial_out(crc_serial_out)
       );
@@ -539,9 +543,9 @@ module adbg_axi_module
 
 
    // sequential part of the FSM
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-    if(rst_i)
+    if(~trstn_i)
       module_state <= STATE_idle;
     else
       module_state <= module_next_state;

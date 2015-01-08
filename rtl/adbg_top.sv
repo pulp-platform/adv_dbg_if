@@ -51,8 +51,7 @@ module adbg_top
         input  logic           tck_i,
         input  logic           tdi_i,
         output logic           tdo_o,
-        input  logic           rst_i,
-
+        input  logic           trstn_i,
 
         // TAP states
         input  logic                   shift_dr_i,
@@ -64,8 +63,7 @@ module adbg_top
         input  logic                       debug_select_i,
 
         // CPU signals
-        input  logic [NB_CORES-1:0]        cpu_clk_i,
-        output logic [NB_CORES-1:0] [31:0] cpu_addr_o, 
+        output logic [NB_CORES-1:0] [15:0] cpu_addr_o, 
         input  logic [NB_CORES-1:0] [31:0] cpu_data_i, 
         output logic [NB_CORES-1:0] [31:0] cpu_data_o,
         input  logic [NB_CORES-1:0]        cpu_bp_i,
@@ -162,9 +160,9 @@ module adbg_top
 // Module select register and select signals
 //////////////////////////////////////////////////////////
 
-    always @ (posedge tck_i or posedge rst_i)
+    always @ (posedge tck_i or negedge trstn_i)
     begin
-        if (rst_i)
+        if (~trstn_i)
             module_id_reg <= 5'h0;
         else if(debug_select_i && select_cmd && update_dr_i && !select_inhibit)       // Chain select
             module_id_reg <= module_id_in;
@@ -188,9 +186,9 @@ module adbg_top
 // Data input shift register
 ///////////////////////////////////////////////
 
-always @ (posedge tck_i or posedge rst_i)
+always @ (posedge tck_i or negedge trstn_i)
 begin
-  if (rst_i)
+  if (~trstn_i)
     input_shift_reg <= 53'h0;
   else if(debug_select_i && shift_dr_i)
     input_shift_reg <= {tdi_i, input_shift_reg[52:1]};
@@ -202,7 +200,12 @@ end
 // Debug module instantiations
 
 // Connecting AXI module
-adbg_axi_module i_dbg_axi (
+adbg_axi_module #(
+       .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
+       .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
+       .AXI_USER_WIDTH(AXI_USER_WIDTH),
+       .AXI_ID_WIDTH(AXI_ID_WIDTH)
+ ) i_dbg_axi (
                   // JTAG signals
                   .tck_i            (tck_i),
                   .module_tdo_o     (tdo_axi),
@@ -216,7 +219,7 @@ adbg_axi_module i_dbg_axi (
                   .data_register_i  (input_shift_reg),
                   .module_select_i  (module_selects[0]),
                   .top_inhibit_o    (module_inhibit[0]),
-                  .rst_i            (rst_i),
+                  .trstn_i          (trstn_i),
 
         .axi_aclk(axi_aclk),
         .axi_aresetn(axi_aresetn),
@@ -288,10 +291,11 @@ adbg_axi_module i_dbg_axi (
                   .data_register_i  (input_shift_reg),
                   .module_select_i  (module_selects[i+1]),
                   .top_inhibit_o    (module_inhibit[i+1]),
-                  .rst_i            (rst_i),
+                  .trstn_i          (trstn_i),
 
                   // CPU signals
-                  .cpu_clk_i        (cpu_clk_i[i]), 
+                  .cpu_clk_i        (axi_aclk), 
+                  .cpu_rstn_i       (axi_aresetn), 
                   .cpu_addr_o       (cpu_addr_o[i]), 
                   .cpu_data_i       (cpu_data_i[i]), 
                   .cpu_data_o       (cpu_data_o[i]),

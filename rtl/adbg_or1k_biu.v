@@ -61,7 +61,7 @@ module adbg_or1k_biu
   (
    // Debug interface signals
    tck_i,
-   rst_i,
+   trstn_i,
    data_i,
    data_o,
    addr_i,
@@ -71,6 +71,7 @@ module adbg_or1k_biu
 
    // OR1K SPR bus signals
    cpu_clk_i,
+   cpu_rstn_i,
    cpu_addr_o,
    cpu_data_i,
    cpu_data_o,
@@ -81,7 +82,7 @@ module adbg_or1k_biu
 
    // Debug interface signals
    input tck_i;
-   input rst_i;
+   input trstn_i;
    input [31:0] data_i;  // Assume short words are in UPPER order bits!
    output [31:0] data_o;
    input [31:0]  addr_i;
@@ -92,6 +93,7 @@ module adbg_or1k_biu
 
    // OR1K SPR bus signals
    input 	 cpu_clk_i;
+   input 	 cpu_rstn_i;
    output [31:0] cpu_addr_o;
    input [31:0]  cpu_data_i;
    output [31:0] cpu_data_o;
@@ -137,9 +139,9 @@ module adbg_or1k_biu
 
 
    // Latch input data on 'start' strobe, if ready.
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-	if(rst_i) begin
+	if(~trstn_i) begin
 	   addr_reg <= 32'h0;
 	   data_in_reg <= 32'h0;
 	   wr_reg <= 1'b0;
@@ -154,16 +156,16 @@ module adbg_or1k_biu
 
    // Create toggle-active strobe signal for clock sync.  This will start a transaction
    // to the CPU once the toggle propagates to the FSM in the cpu_clk domain.
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-	if(rst_i) str_sync <= 1'b0;
+	if(~trstn_i) str_sync <= 1'b0;
 	else if(strobe_i && rdy_o) str_sync <= ~str_sync;
      end 
 
    // Create rdy_o output.  Set on reset, clear on strobe (if set), set on input toggle
-   always @ (posedge tck_i or posedge rst_i)
+   always @ (posedge tck_i or negedge trstn_i)
      begin
-	if(rst_i) begin
+	if(~trstn_i) begin
            rdy_sync_tff1 <= 1'b0;
            rdy_sync_tff2 <= 1'b0;
            rdy_sync_tff2q <= 1'b0;
@@ -194,9 +196,9 @@ module adbg_or1k_biu
    // Wishbone clock domain
 
   // synchronize the start strobe
-  always @ (posedge cpu_clk_i or posedge rst_i)
+  always @ (posedge cpu_clk_i or negedge cpu_rstn_i)
 	  begin
-	     if(rst_i) begin
+	     if(~cpu_rstn_i) begin
 		str_sync_wbff1 <= 1'b0;
 		str_sync_wbff2 <= 1'b0;
 		str_sync_wbff2q <= 1'b0;      
@@ -212,16 +214,16 @@ module adbg_or1k_biu
 
 
    // CPU->dbg data register
-   always @ (posedge cpu_clk_i or posedge rst_i)
+   always @ (posedge cpu_clk_i or negedge cpu_rstn_i)
      begin
-	if(rst_i) data_out_reg <= 32'h0;
+	if(~cpu_rstn_i) data_out_reg <= 32'h0;
 	else if(data_o_en) data_out_reg <= cpu_data_i;
      end
 
    // Create a toggle-active ready signal to send to the TCK domain
-   always @ (posedge cpu_clk_i or posedge rst_i)
+   always @ (posedge cpu_clk_i or negedge cpu_rstn_i)
      begin
-	if(rst_i) rdy_sync <= 1'b0;
+	if(~cpu_rstn_i) rdy_sync <= 1'b0;
 	else if(rdy_sync_en) rdy_sync <= ~rdy_sync;
      end 
 
@@ -238,9 +240,9 @@ module adbg_or1k_biu
 `define STATE_TRANSFER 1'h1
 
    // Sequential bit
-   always @ (posedge cpu_clk_i or posedge rst_i)
+   always @ (posedge cpu_clk_i or negedge cpu_rstn_i)
      begin
-	if(rst_i) cpu_fsm_state <= `STATE_IDLE;
+	if(~cpu_rstn_i) cpu_fsm_state <= `STATE_IDLE;
 	else cpu_fsm_state <= next_fsm_state; 
      end
 

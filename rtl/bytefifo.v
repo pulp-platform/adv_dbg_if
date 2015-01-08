@@ -72,7 +72,7 @@
 // Top module
 module bytefifo (
 		 CLK,
-		 RST,
+		 RSTN,
                  DATA_IN,
 		 DATA_OUT,
 		 PUSH_POPn,
@@ -83,7 +83,7 @@ module bytefifo (
 
 
    input        CLK;
-   input        RST;
+   input        RSTN;
    input  [7:0] DATA_IN;
    output [7:0] DATA_OUT;
    input        PUSH_POPn;
@@ -112,9 +112,9 @@ module bytefifo (
    // FIFO memory / shift registers
    
    // Reg 0 - takes input from DATA_IN
-   always @ (posedge CLK or posedge RST)
+   always @ (posedge CLK or negedge RSTN)
      begin
-	if(RST)
+	if(~RSTN)
 	  reg0 <= 8'h0;
 	else if(EN & PUSH_POPn & push_ok)
 	  reg0 <= DATA_IN;
@@ -122,9 +122,9 @@ module bytefifo (
 
 
    // Reg 1 - takes input from reg0
-   always @ (posedge CLK or posedge RST)
+   always @ (posedge CLK or negedge RSTN)
      begin
-	if(RST)
+	if(~RSTN)
 	  reg1 <= 8'h0;
 	else if(EN & PUSH_POPn & push_ok)
 	  reg1 <= reg0;
@@ -132,9 +132,9 @@ module bytefifo (
 
    
    // Reg 2 - takes input from reg1
-   always @ (posedge CLK or posedge RST)
+   always @ (posedge CLK or negedge RSTN)
      begin
-	if(RST)
+	if(~RSTN)
 	  reg2 <= 8'h0;
 	else if(EN & PUSH_POPn & push_ok)
 	  reg2 <= reg1;
@@ -142,9 +142,9 @@ module bytefifo (
 
    
    // Reg 3 - takes input from reg2
-   always @ (posedge CLK or posedge RST)
+   always @ (posedge CLK or negedge RSTN)
      begin
-	if(RST)
+	if(~RSTN)
 	  reg3 <= 8'h0;
 	else if(EN & PUSH_POPn & push_ok)
 	  reg3 <= reg2;
@@ -152,9 +152,9 @@ module bytefifo (
 
    
    // Reg 4 - takes input from reg3
-   always @ (posedge CLK or posedge RST)
+   always @ (posedge CLK or negedge RSTN)
      begin
-	if(RST)
+	if(~RSTN)
 	  reg4 <= 8'h0;
 	else if(EN & PUSH_POPn & push_ok)
 	  reg4 <= reg3;
@@ -162,9 +162,9 @@ module bytefifo (
 
    
    // Reg 5 - takes input from reg4
-   always @ (posedge CLK or posedge RST)
+   always @ (posedge CLK or negedge RSTN)
      begin
-	if(RST)
+	if(~RSTN)
 	  reg5 <= 8'h0;
 	else if(EN & PUSH_POPn & push_ok)
 	  reg5 <= reg4;
@@ -172,9 +172,9 @@ module bytefifo (
 
    
    // Reg 6 - takes input from reg5
-   always @ (posedge CLK or posedge RST)
+   always @ (posedge CLK or negedge RSTN)
      begin
-	if(RST)
+	if(~RSTN)
 	  reg6 <= 8'h0;
 	else if(EN & PUSH_POPn & push_ok)
 	  reg6 <= reg5;
@@ -182,9 +182,9 @@ module bytefifo (
 
    
    // Reg 7 - takes input from reg6
-   always @ (posedge CLK or posedge RST)
+   always @ (posedge CLK or negedge RSTN)
      begin
-	if(RST)
+	if(~RSTN)
 	  reg7 <= 8'h0;
 	else if(EN & PUSH_POPn & push_ok)
 	  reg7 <= reg6;
@@ -195,9 +195,9 @@ module bytefifo (
    // This is a 4-bit saturating up/down counter
   // The 'saturating' is done via push_ok and pop_ok
   
-   always @ (posedge CLK or posedge RST)
+   always @ (posedge CLK or negedge RSTN)
      begin
-	if(RST)             counter <= 4'h0;
+	if(~RSTN)             counter <= 4'h0;
 	else if(EN & PUSH_POPn & push_ok)  counter <= counter + 4'h1;
 	else if(EN & (~PUSH_POPn) & pop_ok)    counter <= counter - 4'h1;
      end

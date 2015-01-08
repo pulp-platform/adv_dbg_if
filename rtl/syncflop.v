@@ -63,7 +63,7 @@ module syncflop(
                 DEST_CLK,
 		D_SET,
 		D_RST,
-		RESET,
+		RESETN,
                 TOGGLE_IN,
                 D_OUT
 		);
@@ -72,7 +72,7 @@ module syncflop(
    input   DEST_CLK;
    input   D_SET;
    input   D_RST;
-   input   RESET;
+   input   RESETN;
    input   TOGGLE_IN;
    output  D_OUT;
 
@@ -91,33 +91,33 @@ module syncflop(
    assign  D_OUT = srflop | syncxor;
  	   
    // First DFF (always enabled)
-   always @ (posedge DEST_CLK or posedge RESET)
+   always @ (posedge DEST_CLK or negedge RESETN)
      begin
-	if(RESET) sync1 <= 1'b0;
+	if(~RESETN) sync1 <= 1'b0;
 	else sync1 <= TOGGLE_IN;
      end
 
 	   
    // Second DFF (always enabled)
-   always @ (posedge DEST_CLK or posedge RESET)
+   always @ (posedge DEST_CLK or negedge RESETN)
      begin
-	if(RESET) sync2 <= 1'b0;
+	if(~RESETN) sync2 <= 1'b0;
 	else sync2 <= sync1;
      end
 
 	   
    // Third DFF (always enabled, used to detect toggles)
-   always @ (posedge DEST_CLK or posedge RESET)
+   always @ (posedge DEST_CLK or negedge RESETN)
      begin
-	if(RESET) syncprev <= 1'b0;
+	if(~RESETN) syncprev <= 1'b0;
 	else syncprev <= sync2;
      end
 
    
    // Set/Reset FF (holds detected toggles)
-   always @ (posedge DEST_CLK or posedge RESET)
+   always @ (posedge DEST_CLK or negedge RESETN)
      begin
-	if(RESET)         srflop <= 1'b0;
+	if(~RESETN)         srflop <= 1'b0;
 	else if(D_RST)    srflop <= 1'b0;
 	else if (srinput) srflop <= 1'b1;
      end
