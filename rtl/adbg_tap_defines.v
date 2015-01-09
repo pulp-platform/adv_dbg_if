@@ -60,7 +60,7 @@
 
 
 // Define IDCODE Value
-`define IDCODE_VALUE  32'h149511c3
+`define IDCODE_VALUE  32'h249511c3
 // 0001             version
 // 0100100101010001 part number (IQ)
 // 00011100001      manufacturer id (flextronics)

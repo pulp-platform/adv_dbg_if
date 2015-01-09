@@ -148,7 +148,7 @@ module adbg_top
    wire               select_inhibit;  // OR of inhibit signals from sub-modules, prevents latching of a new module ID
    wire [NB_CORES:0] module_inhibit;  // signals to allow submodules to prevent top level from latching new module ID
 
-    integer i;
+    integer j;
 
    ///////////////////////////////////////
    // Combinatorial assignments
@@ -171,12 +171,12 @@ module adbg_top
     always_comb
     begin 
         module_selects = 'h0;
-    	for(i=0; i<=NB_CORES; i++)
+    	for(j=0; j<=NB_CORES; j++)
     	begin 
-    		if ( module_id_reg == i )
-    			module_selects[i] = 1'b1;
+    		if ( module_id_reg == j )
+    			module_selects[j] = 1'b1;
     		else
-    			module_selects[i] = 1'b0;
+    			module_selects[j] = 1'b0;
     	end
     end
 //////////////////////////////////////////////////////////

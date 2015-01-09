@@ -298,6 +298,63 @@ module adbg_axi_biu
    assign data_o = data_out_reg;
    assign err_o  = err_reg;
 
+    assign axi_master_aw_prot   = 'h0;
+    assign axi_master_aw_region = 'h0;
+    assign axi_master_aw_len    = 'h0;
+    assign axi_master_aw_burst  = 'h0;
+    assign axi_master_aw_lock   = 'h0;
+    assign axi_master_aw_cache  = 'h0;
+    assign axi_master_aw_qos    = 'h0;
+    assign axi_master_aw_id     = 'h0;
+    assign axi_master_aw_user   = 'h0;
+    
+    assign axi_master_ar_prot   = 'h0;
+    assign axi_master_ar_region = 'h0;
+    assign axi_master_ar_len    = 'h0;
+    assign axi_master_ar_burst  = 'h0;
+    assign axi_master_ar_lock   = 'h0;
+    assign axi_master_ar_cache  = 'h0;
+    assign axi_master_ar_qos    = 'h0;
+    assign axi_master_ar_id     = 'h0;
+    assign axi_master_ar_user   = 'h0;
+    
+    
+    assign axi_master_w_user    = 'h0;
+    assign axi_master_w_last    = 1'b1;
+    
+                                            
+
+    always @ (word_size_i)
+    begin
+	    case (word_size_i)
+	        4'h1:
+            begin
+                axi_master_aw_size = 3'b000;
+                axi_master_ar_size = 3'b000;
+            end
+	        4'h2:
+            begin
+                axi_master_aw_size = 3'b001;
+                axi_master_ar_size = 3'b001;
+            end
+	        4'h4:
+            begin
+                axi_master_aw_size = 3'b010;
+                axi_master_ar_size = 3'b010;
+            end
+	        4'h8:
+            begin
+                axi_master_aw_size = 3'b011;
+                axi_master_ar_size = 3'b011;
+            end
+	        default:
+            begin
+                axi_master_aw_size = 3'b011;
+                axi_master_ar_size = 3'b011;
+            end
+        endcase
+    end
+
    ///////////////////////////////////////////////////////
    // Wishbone clock domain
 
@@ -409,7 +466,7 @@ module adbg_axi_biu
                 else
                     axi_master_ar_valid = 1'b1;
                 if (wr_reg && axi_master_aw_ready)
-                    next_fsm_state = S_AXIADDR;
+                    next_fsm_state = S_AXIDATA;
                 else if (!wr_reg && axi_master_ar_ready)
                     next_fsm_state = S_AXIRESP;
             end

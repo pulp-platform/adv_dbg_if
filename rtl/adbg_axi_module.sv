@@ -186,7 +186,8 @@ module adbg_axi_module
    wire                               module_cmd;              // inverse of MSB of data_register_i. 1 means current cmd not for top level (but is for us)
    wire                               biu_ready;               // indicates that the BIU has finished the last command
    wire                               biu_err;                 // indicates wishbone error during BIU transaction
-   wire                               burst_instruction;       // True when the input_data_i reg has a valid burst instruction for this module
+   wire                               burst_read;              // True when the input_data_i reg has a valid burst read  instruction for this module 
+   wire                               burst_write;             // True when the input_data_i reg has a valid burst write instruction for this module
    wire                               intreg_instruction;      // True when the input_data_i reg has a valid internal register instruction
    wire                               intreg_write;            // True when the input_data_i reg has an internal register write op
    reg                                rd_op;                   // True when operation in the opcode reg is a read, false when a write
@@ -218,25 +219,33 @@ module adbg_axi_module
    /////////////////////////////////////////////////
    // Combinatorial assignments
 
-       assign module_cmd = ~(data_register_i[52]);
+   assign     module_cmd = ~(data_register_i[52]);
    assign     operation_in = data_register_i[51:48];
    assign     address_data_in = data_register_i[47:16];
    assign     count_data_in = data_register_i[15:0];
+
 `ifdef ADBG_USE_HISPEED
-   assign data_to_biu = {tdi_i,data_register_i[52:22]};
+   assign     data_to_biu = {tdi_i,data_register_i[52:22]};
 `else
    assign     data_to_biu = data_register_i[52:21];
 `endif
+
    assign     reg_select_data = data_register_i[47:(47-(`DBG_AXI_REGSELECT_SIZE-1))];
 
    ////////////////////////////////////////////////
           // Operation decoder
 
    // These are only used before the operation is latched, so decode them from operation_in
-   assign     burst_instruction = (~operation_in[3]) & (operation_in[0] | operation_in[1]);
    assign     intreg_instruction = ((operation_in == `DBG_AXI_CMD_IREG_WR) | (operation_in == `DBG_AXI_CMD_IREG_SEL));
    assign     intreg_write = (operation_in == `DBG_AXI_CMD_IREG_WR);
-
+   assign     burst_write = (operation_in == `DBG_AXI_CMD_BWRITE8) | 
+                            (operation_in == `DBG_AXI_CMD_BWRITE16) | 
+                            (operation_in == `DBG_AXI_CMD_BWRITE32) | 
+                            (operation_in == `DBG_AXI_CMD_BWRITE64); 
+   assign     burst_read  = (operation_in == `DBG_AXI_CMD_BREAD8) | 
+                            (operation_in == `DBG_AXI_CMD_BREAD16) | 
+                            (operation_in == `DBG_AXI_CMD_BREAD32) | 
+                            (operation_in == `DBG_AXI_CMD_BREAD64); 
 
    // This is decoded from the registered operation
    always @ (operation)
@@ -304,11 +313,13 @@ module adbg_axi_module
    // Module-internal register select register (no, that's not redundant.)
    // Also internal register output MUX
 
-   always @ (posedge tck_i or negedge trstn_i)
-     begin
-    if(~trstn_i) internal_register_select = 1'h0;
-    else if(regsel_ld_en) internal_register_select = reg_select_data;
-     end
+    always @ (posedge tck_i or negedge trstn_i)
+    begin
+        if(~trstn_i) 
+            internal_register_select = 1'h0;
+        else if (regsel_ld_en) 
+            internal_register_select = reg_select_data;
+    end
 
    // This is completely unnecessary here, since the WB module has only 1 internal
    // register.  However, to make the module expandable, it is included anyway.
@@ -336,24 +347,27 @@ module adbg_axi_module
    // otherwise, we would write the previously selected register.
 
 
-   always @ (posedge tck_i or negedge trstn_i)
-     begin
-    if(~trstn_i) internal_reg_error = 33'h0;
-    else if(intreg_ld_en && (reg_select_data == `DBG_AXI_INTREG_ERROR))  // do load from data input register
-      begin
-             if(data_register_i[46]) internal_reg_error[0] = 1'b0;  // if write data is 1, reset the error bit
-      end
-    else if(error_reg_en && !internal_reg_error[0])
-      begin
-`ifdef ADBG_USE_HISPEED
-             if(biu_err || (!biu_ready))  internal_reg_error[0] = 1'b1;        
-`else
-             if(biu_err)  internal_reg_error[0] = 1'b1;
-`endif
+    always @ (posedge tck_i or negedge trstn_i)
+    begin
+        if(~trstn_i) 
+            internal_reg_error = 33'h0;
+        else if(intreg_ld_en && (reg_select_data == `DBG_AXI_INTREG_ERROR))  // do load from data input register
+        begin
+            if(data_register_i[46]) 
+                internal_reg_error[0] = 1'b0;  // if write data is 1, reset the error bit
+        end
+        else if(error_reg_en && !internal_reg_error[0])
+        begin
+          `ifdef ADBG_USE_HISPEED
+            if(biu_err || (!biu_ready))  internal_reg_error[0] = 1'b1;        
+          `else
+            if(biu_err)  internal_reg_error[0] = 1'b1;
+          `endif
              else if(biu_strobe) internal_reg_error[32:1] = address_counter;
-      end
-    else if(biu_strobe && !internal_reg_error[0]) internal_reg_error[32:1] = address_counter;  // When no error, latch this whether error_reg_en or not
-     end
+        end
+        else if(biu_strobe && !internal_reg_error[0]) 
+            internal_reg_error[32:1] = address_counter;  // When no error, latch this whether error_reg_en or not
+        end
 
    ///////////////////////////////////////////////
    // Address counter
@@ -554,13 +568,15 @@ module adbg_axi_module
 
    // Determination of next state; purely combinatorial
    always @ (module_state or module_select_i or module_cmd or update_dr_i or capture_dr_i or operation_in[2]
-         or word_count_zero or bit_count_max or data_register_i[52] or bit_count_32 or biu_ready or burst_instruction)
+         or word_count_zero or bit_count_max or data_register_i[52] or bit_count_32 or biu_ready or burst_read or burst_write)
      begin
     case(module_state)
        STATE_idle:
         begin
-           if(module_cmd && module_select_i && update_dr_i && burst_instruction && operation_in[2]) module_next_state <= STATE_Rbegin;
-           else if(module_cmd && module_select_i && update_dr_i && burst_instruction) module_next_state <= STATE_Wready;
+           if(module_cmd && module_select_i && update_dr_i && burst_read) 
+                module_next_state <= STATE_Rbegin;
+           else if(module_cmd && module_select_i && update_dr_i && burst_write) 
+                module_next_state <= STATE_Wready;
            else module_next_state <= STATE_idle;
         end
 
@@ -680,30 +696,35 @@ module adbg_axi_module
     top_inhibit_o <= 1'b0;  // Don't disable the top-level module in the default case
 
     case(module_state)
-      STATE_idle:
+        STATE_idle:
         begin
-           addr_sel <= 1'b0;
-           word_ct_sel <= 1'b0;
+            addr_sel <= 1'b0;
+            word_ct_sel <= 1'b0;
            
-           // Operations for internal registers - stay in idle state
-           if(module_select_i & shift_dr_i) out_reg_shift_en <= 1'b1; // For module regs
-           if(module_select_i & capture_dr_i) 
-         begin
-            out_reg_data_sel <= 1'b1;  // select internal register data
-            out_reg_ld_en <= 1'b1;   // For module regs
-         end
-           if(module_select_i & module_cmd & update_dr_i) begin
-          if(intreg_instruction) regsel_ld_en <= 1'b1;  // For module regs
-          if(intreg_write)       intreg_ld_en <= 1'b1;  // For module regs
-           end
+            // Operations for internal registers - stay in idle state
+            if(module_select_i & shift_dr_i) 
+                out_reg_shift_en <= 1'b1; // For module regs
+            if(module_select_i & capture_dr_i) 
+            begin
+                out_reg_data_sel <= 1'b1;  // select internal register data
+                out_reg_ld_en <= 1'b1;   // For module regs
+            end
+            if(module_select_i & module_cmd & update_dr_i) 
+            begin
+                if(intreg_instruction) 
+                    regsel_ld_en <= 1'b1;  // For module regs
+                if(intreg_write)       
+                    intreg_ld_en <= 1'b1;  // For module regs
+            end
            
-           // Burst operations
-           if(module_next_state != STATE_idle) begin  // Do the same to receive read or write opcode
-          addr_ct_en <= 1'b1;
-          op_reg_en <= 1'b1;
-          bit_ct_rst <= 1'b1;
-          word_ct_en <= 1'b1;
-          crc_clr <= 1'b1;
+            // Burst operations
+            if(module_next_state != STATE_idle) 
+            begin  // Do the same to receive read or write opcode
+                addr_ct_en <= 1'b1;
+                op_reg_en <= 1'b1;
+                bit_ct_rst <= 1'b1;
+                word_ct_en <= 1'b1;
+                crc_clr <= 1'b1;
            end
         end
 
