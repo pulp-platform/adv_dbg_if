@@ -74,19 +74,19 @@ module adbg_axi_module
             parameter AXI_ID_WIDTH   = 3
         ) (
         // JTAG signals
-		input  logic        tck_i,
-		output logic        module_tdo_o,
-		input  logic        tdi_i,
+		input  logic                                tck_i,
+		output logic                                module_tdo_o,
+		input  logic                                tdi_i,
 
         // TAP states
-		input  logic        capture_dr_i,
-		input  logic        shift_dr_i,
-		input  logic        update_dr_i,
+		input  logic                                capture_dr_i,
+		input  logic                                shift_dr_i,
+		input  logic                                update_dr_i,
 
-		input  logic [52:0] data_register_i,  // the data register is at top level, shared between all modules
-		input  logic        module_select_i,
-		output logic        top_inhibit_o,
-		input  logic        trstn_i,
+		input  logic [`DBG_TOP_MODULE_DATA_LEN-1:0] data_register_i,  // the data register is at top level, shared between all modules
+		input  logic                                module_select_i,
+		output logic                                top_inhibit_o,
+		input  logic                                trstn_i,
 
 		// AXI4 MASTER
 		//***************************************
@@ -153,7 +153,7 @@ module adbg_axi_module
    reg                         [5:0] bit_count;            // How many bits have been shifted in/out
    reg                        [15:0] word_count;          // bytes remaining in current burst command
    reg                         [3:0] operation;            // holds the current command (rd/wr, word size)
-   reg                        [32:0] data_out_shift_reg;  // 32 bits to accomodate the internal_reg_error
+   reg                        [64:0] data_out_shift_reg;  // 32 bits to accomodate the internal_reg_error
    reg [`DBG_AXI_REGSELECT_SIZE-1:0] internal_register_select;  // Holds index of currently selected register
    reg                        [32:0] internal_reg_error;  // WB error module internal register.  32 bit address + error bit (LSB)
 
@@ -210,8 +210,8 @@ module adbg_axi_module
    wire                               crc_data_in;             // input to CRC module, either data_register_i[52] or data_out_shift_reg[0]
    wire                               crc_serial_out;
    wire [`DBG_AXI_REGSELECT_SIZE-1:0] reg_select_data;         // from data_register_i, input to internal register select register
-   wire                        [32:0] out_reg_data;            // parallel input to the output shift register
-   reg                         [32:0] data_from_internal_reg;  // data from internal reg. MUX to output shift register
+   wire                        [64:0] out_reg_data;            // parallel input to the output shift register
+   reg                         [64:0] data_from_internal_reg;  // data from internal reg. MUX to output shift register
    wire                               biu_rst;                 // logical OR of rst_i and biu_clr_err
 
    enum logic [3:0] {STATE_idle,STATE_Rbegin,STATE_Rready,STATE_Rstatus,STATE_Rburst,STATE_Wready,STATE_Wwait,STATE_Wburst,STATE_Wstatus,STATE_Rcrc,STATE_Wcrc,STATE_Wmatch} module_state,module_next_state;
@@ -219,33 +219,36 @@ module adbg_axi_module
    /////////////////////////////////////////////////
    // Combinatorial assignments
 
-   assign     module_cmd = ~(data_register_i[52]);
-   assign     operation_in = data_register_i[51:48];
-   assign     address_data_in = data_register_i[47:16];
-   assign     count_data_in = data_register_i[15:0];
+   assign     module_cmd      = ~(data_register_i[`DBG_TOP_MODULE_DATA_LEN-1]);
+   assign     operation_in    =   data_register_i[`DBG_TOP_MODULE_DATA_LEN-2 :`DBG_TOP_MODULE_DATA_LEN-5 ];
+   assign     address_data_in =   data_register_i[`DBG_TOP_MODULE_DATA_LEN-6 :`DBG_TOP_MODULE_DATA_LEN-37];
+   assign     count_data_in   =   data_register_i[`DBG_TOP_MODULE_DATA_LEN-38:`DBG_TOP_MODULE_DATA_LEN-53];
 
 `ifdef ADBG_USE_HISPEED
-   assign     data_to_biu = {tdi_i,data_register_i[52:22]};
+   assign     data_to_biu = {tdi_i,data_register_i[`DBG_TOP_MODULE_DATA_LEN-1:`DBG_TOP_MODULE_DATA_LEN-63]};
 `else
-   assign     data_to_biu = data_register_i[52:21];
+   assign     data_to_biu = data_register_i[`DBG_TOP_MODULE_DATA_LEN-1:`DBG_TOP_MODULE_DATA_LEN-64];
 `endif
 
-   assign     reg_select_data = data_register_i[47:(47-(`DBG_AXI_REGSELECT_SIZE-1))];
+   assign     reg_select_data = data_register_i[`DBG_TOP_MODULE_DATA_LEN-6:((`DBG_TOP_MODULE_DATA_LEN-6)-(`DBG_AXI_REGSELECT_SIZE-1))];
 
    ////////////////////////////////////////////////
           // Operation decoder
 
    // These are only used before the operation is latched, so decode them from operation_in
-   assign     intreg_instruction = ((operation_in == `DBG_AXI_CMD_IREG_WR) | (operation_in == `DBG_AXI_CMD_IREG_SEL));
-   assign     intreg_write = (operation_in == `DBG_AXI_CMD_IREG_WR);
-   assign     burst_write = (operation_in == `DBG_AXI_CMD_BWRITE8) | 
-                            (operation_in == `DBG_AXI_CMD_BWRITE16) | 
-                            (operation_in == `DBG_AXI_CMD_BWRITE32) | 
-                            (operation_in == `DBG_AXI_CMD_BWRITE64); 
-   assign     burst_read  = (operation_in == `DBG_AXI_CMD_BREAD8) | 
-                            (operation_in == `DBG_AXI_CMD_BREAD16) | 
-                            (operation_in == `DBG_AXI_CMD_BREAD32) | 
-                            (operation_in == `DBG_AXI_CMD_BREAD64); 
+   assign intreg_instruction = ((operation_in == `DBG_AXI_CMD_IREG_WR) | (operation_in == `DBG_AXI_CMD_IREG_SEL));
+
+   assign intreg_write = (operation_in == `DBG_AXI_CMD_IREG_WR);
+
+   assign burst_write =  (operation_in == `DBG_AXI_CMD_BWRITE8)  | 
+                         (operation_in == `DBG_AXI_CMD_BWRITE16) | 
+                         (operation_in == `DBG_AXI_CMD_BWRITE32) | 
+                         (operation_in == `DBG_AXI_CMD_BWRITE64); 
+
+   assign burst_read  =  (operation_in == `DBG_AXI_CMD_BREAD8)  | 
+                         (operation_in == `DBG_AXI_CMD_BREAD16) | 
+                         (operation_in == `DBG_AXI_CMD_BREAD32) | 
+                         (operation_in == `DBG_AXI_CMD_BREAD64); 
 
    // This is decoded from the registered operation
    always @ (operation)
@@ -436,9 +439,9 @@ module adbg_axi_module
 
    always @ (posedge tck_i or negedge trstn_i)
      begin
-    if(~trstn_i) data_out_shift_reg <= 33'h0;
+    if(~trstn_i) data_out_shift_reg <= 'h0;
     else if(out_reg_ld_en) data_out_shift_reg <= out_reg_data;
-    else if(out_reg_shift_en) data_out_shift_reg <= {1'b0, data_out_shift_reg[32:1]};
+    else if(out_reg_shift_en) data_out_shift_reg <= {1'b0, data_out_shift_reg[64:1]};
      end
 
 

@@ -37,6 +37,8 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 
+`include "adbg_defines.v"
+
 
 // Top module
 module adbg_top  
@@ -133,20 +135,20 @@ module adbg_top
     );
 
 
-   wire 	 tdo_axi;
-   wire 	 [NB_CORES-1:0] tdo_cpu;
+   wire                tdo_axi;
+   wire [NB_CORES-1:0] tdo_cpu;
 
    // Registers
-   reg [52:0] input_shift_reg;  // 1 bit sel/cmd, 4 bit opcode, 32 bit address, 16 bit length = 53 bits
-   reg  [4:0] module_id_reg;   // Module selection register
+   reg [`DBG_TOP_MODULE_DATA_LEN-1:0] input_shift_reg;  // 1 bit sel/cmd, 4 bit opcode, 32 bit address, 16 bit length = 53 bits
+   reg                          [4:0] module_id_reg;    // Module selection register
 
 
    // Control signals
    wire               select_cmd;      // True when the command (registered at Update_DR) is for top level/module selection
    wire         [4:0] module_id_in;    // The part of the input_shift_register to be used as the module select data
-   reg  [NB_CORES:0] module_selects;  // Select signals for the individual modules, number of modules = NB_CORES+1
+   reg   [NB_CORES:0] module_selects;  // Select signals for the individual modules, number of modules = NB_CORES+1
    wire               select_inhibit;  // OR of inhibit signals from sub-modules, prevents latching of a new module ID
-   wire [NB_CORES:0] module_inhibit;  // signals to allow submodules to prevent top level from latching new module ID
+   wire  [NB_CORES:0] module_inhibit;  // signals to allow submodules to prevent top level from latching new module ID
 
     integer j;
 
@@ -189,9 +191,9 @@ module adbg_top
 always @ (posedge tck_i or negedge trstn_i)
 begin
   if (~trstn_i)
-    input_shift_reg <= 53'h0;
+    input_shift_reg <= 'h0;
   else if(debug_select_i && shift_dr_i)
-    input_shift_reg <= {tdi_i, input_shift_reg[52:1]};
+    input_shift_reg <= {tdi_i, input_shift_reg[`DBG_TOP_MODULE_DATA_LEN-1:1]};
 end
 ///////////////////////////////////////////////
 
@@ -288,7 +290,7 @@ adbg_axi_module #(
                   .shift_dr_i       (shift_dr_i),
                   .update_dr_i      (update_dr_i),
 
-                  .data_register_i  (input_shift_reg),
+                  .data_register_i  (input_shift_reg[63:11]),
                   .module_select_i  (module_selects[i+1]),
                   .top_inhibit_o    (module_inhibit[i+1]),
                   .trstn_i          (trstn_i),

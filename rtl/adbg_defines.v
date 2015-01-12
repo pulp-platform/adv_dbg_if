@@ -51,7 +51,7 @@
 `define DBG_TOP_JSP_DEBUG_MODULE       2'h3
 
 // Length of data
-`define DBG_TOP_MODULE_DATA_LEN  53
+`define DBG_TOP_MODULE_DATA_LEN  64
 
 
 // If WISHBONE sub-module is supported uncomment the following line
