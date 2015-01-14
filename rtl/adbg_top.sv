@@ -41,7 +41,7 @@
 
 
 // Top module
-module adbg_top  
+module adbg_top
     #(
         parameter NB_CORES       = 4,
         parameter AXI_ADDR_WIDTH = 32,
@@ -65,8 +65,8 @@ module adbg_top
         input  logic                       debug_select_i,
 
         // CPU signals
-        output logic [NB_CORES-1:0] [15:0] cpu_addr_o, 
-        input  logic [NB_CORES-1:0] [31:0] cpu_data_i, 
+        output logic [NB_CORES-1:0] [15:0] cpu_addr_o,
+        input  logic [NB_CORES-1:0] [31:0] cpu_data_i,
         output logic [NB_CORES-1:0] [31:0] cpu_data_o,
         input  logic [NB_CORES-1:0]        cpu_bp_i,
         output logic [NB_CORES-1:0]        cpu_stall_o,
@@ -74,7 +74,7 @@ module adbg_top
         output logic [NB_CORES-1:0]        cpu_we_o,
         input  logic [NB_CORES-1:0]        cpu_ack_i,
         output logic [NB_CORES-1:0]        cpu_rst_o,
-		
+
 		// AXI4 MASTER
 		//***************************************
 		input  logic                        axi_aclk,
@@ -93,7 +93,7 @@ module adbg_top
 		output logic [AXI_ID_WIDTH-1:0]     axi_master_aw_id,
 		output logic [AXI_USER_WIDTH-1:0]   axi_master_aw_user,
 		input  logic                        axi_master_aw_ready,
-    
+
 		// READ ADDRESS CHANNEL
 		output logic                        axi_master_ar_valid,
 		output logic [AXI_ADDR_WIDTH-1:0]   axi_master_ar_addr,
@@ -108,7 +108,7 @@ module adbg_top
 		output logic [AXI_ID_WIDTH-1:0]     axi_master_ar_id,
 		output logic [AXI_USER_WIDTH-1:0]   axi_master_ar_user,
 		input  logic                        axi_master_ar_ready,
-    
+
 		// WRITE DATA CHANNEL
 		output logic                        axi_master_w_valid,
 		output logic [AXI_DATA_WIDTH-1:0]   axi_master_w_data,
@@ -116,7 +116,7 @@ module adbg_top
 		output logic [AXI_USER_WIDTH-1:0]   axi_master_w_user,
 		output logic                        axi_master_w_last,
 		input  logic                        axi_master_w_ready,
-    
+
 		// READ DATA CHANNEL
 		input  logic                        axi_master_r_valid,
 		input  logic [AXI_DATA_WIDTH-1:0]   axi_master_r_data,
@@ -125,8 +125,8 @@ module adbg_top
 		input  logic [AXI_ID_WIDTH-1:0]     axi_master_r_id,
 		input  logic [AXI_USER_WIDTH-1:0]   axi_master_r_user,
 		output logic                        axi_master_r_ready,
-                                            
-		// WRITE RESPONSE CHANNEL           
+
+		// WRITE RESPONSE CHANNEL
 		input  logic                        axi_master_b_valid,
 		input  logic [1:0]                  axi_master_b_resp,
 		input  logic [AXI_ID_WIDTH-1:0]     axi_master_b_id,
@@ -155,8 +155,8 @@ module adbg_top
    ///////////////////////////////////////
    // Combinatorial assignments
 
-    assign select_cmd   = input_shift_reg[52];
-    assign module_id_in = input_shift_reg[51:47];
+    assign select_cmd   = input_shift_reg[`DBG_TOP_MODULE_DATA_LEN-1];
+    assign module_id_in = input_shift_reg[`DBG_TOP_MODULE_DATA_LEN-2:`DBG_TOP_MODULE_DATA_LEN-6];
 
 //////////////////////////////////////////////////////////
 // Module select register and select signals
@@ -171,10 +171,10 @@ module adbg_top
     end
 
     always_comb
-    begin 
+    begin
         module_selects = 'h0;
     	for(j=0; j<=NB_CORES; j++)
-    	begin 
+    	begin
     		if ( module_id_reg == j )
     			module_selects[j] = 1'b1;
     		else
@@ -276,7 +276,7 @@ adbg_axi_module #(
         .axi_master_b_ready(axi_master_b_ready)
             );
 
-    generate  
+    generate
         for (genvar i=0; i<NB_CORES; i++)
         begin
             adbg_or1k_module i_dbg_cpu_or1k (
@@ -296,10 +296,10 @@ adbg_axi_module #(
                   .trstn_i          (trstn_i),
 
                   // CPU signals
-                  .cpu_clk_i        (axi_aclk), 
-                  .cpu_rstn_i       (axi_aresetn), 
-                  .cpu_addr_o       (cpu_addr_o[i]), 
-                  .cpu_data_i       (cpu_data_i[i]), 
+                  .cpu_clk_i        (axi_aclk),
+                  .cpu_rstn_i       (axi_aresetn),
+                  .cpu_addr_o       (cpu_addr_o[i]),
+                  .cpu_data_i       (cpu_data_i[i]),
                   .cpu_data_o       (cpu_data_o[i]),
                   .cpu_bp_i         (cpu_bp_i[i]),
                   .cpu_stall_o      (cpu_stall_o[i]),
@@ -311,7 +311,7 @@ adbg_axi_module #(
         end
     endgenerate
 
-   
+
 assign select_inhibit = | module_inhibit;
 
 /////////////////////////////////////////////////
