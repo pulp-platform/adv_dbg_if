@@ -59,16 +59,10 @@
 //
 
 
-// These relate to the number of internal registers, and how
-// many bits are required in the Reg. Select register
-`define DBG_OR1K_REGSELECT_SIZE 1
-`define DBG_OR1K_NUM_INTREG 1
 
 // Register index definitions for module-internal registers
 // Index 0 is the Status register, used for stall and reset
-`define DBG_OR1K_INTREG_STATUS 1'b0
-
-`define DBG_OR1K_STATUS_LEN 2
+`define DBG_OR1K_INTREG_STATUS 3'b000
 
 // Valid commands/opcodes for the or1k debug module
 // 0000  NOP

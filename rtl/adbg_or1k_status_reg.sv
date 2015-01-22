@@ -65,86 +65,73 @@
 
 `include "adbg_or1k_defines.v"
 
-module adbg_or1k_status_reg  (
-                              data_i, 
-                              we_i, 
-                              tck_i, 
-                              bp_i, 
-                              trstn_i,
-                              cpu_clk_i, 
-                              cpu_rstn_i, 
-                              ctrl_reg_o,
-                              cpu_stall_o, 
-                              cpu_rst_o 
-                              );
+module adbg_or1k_status_reg  #( 
+        parameter NB_CORES = 4
+    ) (
+    input                       tck_i,
+    input                       trstn_i,
+    input                       we_i,
+    input                       cpu_clk_i,
+    input                       cpu_rstn_i,
+    input  logic [NB_CORES-1:0] data_i,
+    input  logic [NB_CORES-1:0] bp_i,
+    output logic [NB_CORES-1:0] ctrl_reg_o,
+    output logic [NB_CORES-1:0] cpu_stall_o
+);
 
-
-   input  [`DBG_OR1K_STATUS_LEN - 1:0] data_i;
-   input 			       we_i;
-   input 			       tck_i;
-   input 			       bp_i;
-   input 			       trstn_i;
-   input 			       cpu_clk_i;
-   input 			       cpu_rstn_i;
-
-   output [`DBG_OR1K_STATUS_LEN - 1:0] ctrl_reg_o;
-   output 			       cpu_stall_o;
-   output 			       cpu_rst_o;
-
-   reg 				       cpu_reset;
-   wire [2:1] 			       cpu_op_out;
-
-   reg 				       stall_bp, stall_bp_csff, stall_bp_tck;
-   reg 				       stall_reg, stall_reg_csff, stall_reg_cpu;
-   reg 				       cpu_reset_csff;
-   reg 				       cpu_rst_o;
-
-
+   reg   [NB_CORES-1:0] stall_bp, stall_bp_csff, stall_bp_tck;
+   reg   [NB_CORES-1:0] stall_reg, stall_reg_csff, stall_reg_cpu;
 
    // Breakpoint is latched and synchronized. Stall is set and latched.
    // This is done in the CPU clock domain, because the JTAG clock (TCK) is
    // irregular.  By only allowing bp_i to set (but not reset) the stall_bp
    // signal, we insure that the CPU will remain in the stalled state until
    // the debug host can read the state.
-   always @ (posedge cpu_clk_i or negedge cpu_rstn_i)
-     begin
-	if(~cpu_rstn_i)
-	  stall_bp <= 1'b0;
-	else if(bp_i)
-	  stall_bp <= 1'b1;
-	else if(stall_reg_cpu)
-	  stall_bp <= 1'b0;
-     end
+    always @ (posedge cpu_clk_i or negedge cpu_rstn_i)
+    begin
+        if(~cpu_rstn_i)
+            stall_bp <= 'h0;
+        else
+        begin
+            for (int i=0;i<NB_CORES;i++)
+            begin
+                if(bp_i[i])
+                    stall_bp[i] <= 1'b1;
+                else if(stall_reg_cpu[i])
+                    stall_bp[i] <= 1'b0;
+            end
+        end
+    end
 
 
    // Synchronizing
    always @ (posedge tck_i or negedge trstn_i)
      begin
-	if (~trstn_i)
-	  begin
-	     stall_bp_csff <= 1'b0;
-	     stall_bp_tck  <= 1'b0;
-	  end
-	else
-	  begin
-	     stall_bp_csff <= stall_bp;
-	     stall_bp_tck  <= stall_bp_csff;
-	  end
+    if (~trstn_i)
+      begin
+         stall_bp_csff <= 'h0;
+         stall_bp_tck  <= 'h0;
+      end
+    else
+      begin
+         stall_bp_csff <= stall_bp;
+         stall_bp_tck  <= stall_bp_csff;
+      end
      end
 
 
    always @ (posedge cpu_clk_i or negedge cpu_rstn_i)
      begin
-	if (~cpu_rstn_i)
-	  begin
-	     stall_reg_csff <= 1'b0;
-	     stall_reg_cpu  <= 1'b0;
-	  end
-	else
-	  begin
-	     stall_reg_csff <= stall_reg;
-	     stall_reg_cpu  <= stall_reg_csff;
-	  end
+    if (~cpu_rstn_i)
+      begin
+         stall_reg_csff <= 'h0;
+         stall_reg_cpu  <= 'h0;
+      end
+    else
+      begin
+         stall_reg_csff <= stall_reg;
+         stall_reg_cpu  <= stall_reg_csff;
+      end
      end
 
    // bp_i forces a stall immediately on a breakpoint
@@ -156,46 +143,24 @@ module adbg_or1k_status_reg  (
    // Writing data to the control registers (stall)
    // This can be set either by the debug host, or by
    // a CPU breakpoint.  It can only be cleared by the host.
-   always @ (posedge tck_i or negedge trstn_i)
-     begin
-	if (~trstn_i)
-	  stall_reg <= 1'b0;
-	else if (stall_bp_tck)
-	  stall_reg <= 1'b1;
-	else if (we_i)
-	  stall_reg <= data_i[0];
-     end
-
-
-   // Writing data to the control registers (reset)
-   always @ (posedge tck_i or negedge trstn_i)
-     begin
-	if (~trstn_i)
-	  cpu_reset  <= 1'b0;
-	else if(we_i)
-	  cpu_reset  <= data_i[1];
-     end
-
-
-   // Synchronizing signals from registers
-   always @ (posedge cpu_clk_i or negedge cpu_rstn_i)
-     begin
-	if (~cpu_rstn_i)
-	  begin
-	     cpu_reset_csff      <= 1'b0; 
-	     cpu_rst_o           <= 1'b0; 
-	  end
-	else
-	  begin
-	     cpu_reset_csff      <= cpu_reset;
-	     cpu_rst_o           <= cpu_reset_csff;
-	  end
-     end
-
-
+    always @ (posedge tck_i or negedge trstn_i)
+    begin
+        if (~trstn_i)
+            stall_reg <= 'h0;
+        else
+        begin
+            for (int i=0;i<NB_CORES;i++)
+            begin
+                if (stall_bp_tck[i])
+                    stall_reg[i] <= 1'b1;
+                else if (we_i)
+                    stall_reg[i] <= data_i[i];
+            end
+        end
+    end
 
    // Value for read back
-   assign ctrl_reg_o = {cpu_reset, stall_reg};
+   assign ctrl_reg_o = {stall_reg};
 
 
 endmodule

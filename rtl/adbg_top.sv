@@ -136,7 +136,7 @@ module adbg_top
 
 
    wire                tdo_axi;
-   wire [NB_CORES-1:0] tdo_cpu;
+   wire                tdo_cpu;
 
    // Registers
    reg [`DBG_TOP_MODULE_DATA_LEN-1:0] input_shift_reg;  // 1 bit sel/cmd, 4 bit opcode, 32 bit address, 16 bit length = 53 bits
@@ -146,9 +146,9 @@ module adbg_top
    // Control signals
    wire               select_cmd;      // True when the command (registered at Update_DR) is for top level/module selection
    wire         [4:0] module_id_in;    // The part of the input_shift_register to be used as the module select data
-   reg   [NB_CORES:0] module_selects;  // Select signals for the individual modules, number of modules = NB_CORES+1
+   reg          [1:0] module_selects;  // Select signals for the individual modules, number of modules = 2(AXI and CPU)
    wire               select_inhibit;  // OR of inhibit signals from sub-modules, prevents latching of a new module ID
-   wire  [NB_CORES:0] module_inhibit;  // signals to allow submodules to prevent top level from latching new module ID
+   wire         [1:0] module_inhibit;  // signals to allow submodules to prevent top level from latching new module ID
 
     integer j;
 
@@ -172,14 +172,10 @@ module adbg_top
 
     always_comb
     begin
-        module_selects = 'h0;
-    	for(j=0; j<=NB_CORES; j++)
-    	begin
-    		if ( module_id_reg == j )
-    			module_selects[j] = 1'b1;
-    		else
-    			module_selects[j] = 1'b0;
-    	end
+  		if ( module_id_reg == 0 )
+            module_selects = 2'b01;
+        else
+            module_selects = 2'b10;
     end
 //////////////////////////////////////////////////////////
 
@@ -202,26 +198,26 @@ end
 // Debug module instantiations
 
 // Connecting AXI module
-adbg_axi_module #(
+    adbg_axi_module #(
        .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
        .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
        .AXI_USER_WIDTH(AXI_USER_WIDTH),
        .AXI_ID_WIDTH(AXI_ID_WIDTH)
- ) i_dbg_axi (
-                  // JTAG signals
-                  .tck_i            (tck_i),
-                  .module_tdo_o     (tdo_axi),
-                  .tdi_i            (tdi_i),
+    ) i_dbg_axi (
+        // JTAG signals
+        .tck_i            (tck_i),
+        .module_tdo_o     (tdo_axi),
+        .tdi_i            (tdi_i),
 
-                  // TAP states
-                  .capture_dr_i     (capture_dr_i),
-                  .shift_dr_i       (shift_dr_i),
-                  .update_dr_i      (update_dr_i),
+        // TAP states
+        .capture_dr_i     (capture_dr_i),
+        .shift_dr_i       (shift_dr_i),
+        .update_dr_i      (update_dr_i),
 
-                  .data_register_i  (input_shift_reg),
-                  .module_select_i  (module_selects[0]),
-                  .top_inhibit_o    (module_inhibit[0]),
-                  .trstn_i          (trstn_i),
+        .data_register_i  (input_shift_reg),
+        .module_select_i  (module_selects[0]),
+        .top_inhibit_o    (module_inhibit[0]),
+        .trstn_i          (trstn_i),
 
         .axi_aclk(axi_aclk),
         .axi_aresetn(axi_aresetn),
@@ -274,58 +270,54 @@ adbg_axi_module #(
         .axi_master_b_id(axi_master_b_id),
         .axi_master_b_user(axi_master_b_user),
         .axi_master_b_ready(axi_master_b_ready)
-            );
+    );
 
-    generate
-        for (genvar i=0; i<NB_CORES; i++)
-        begin
-            adbg_or1k_module i_dbg_cpu_or1k (
-                  // JTAG signals
-                  .tck_i            (tck_i),
-                  .module_tdo_o     (tdo_cpu[i]),
-                  .tdi_i            (tdi_i),
+    adbg_or1k_module #(
+       .NB_CORES(NB_CORES)
+    ) i_dbg_cpu_or1k (
+        // JTAG signals
+        .tck_i            (tck_i),
+        .module_tdo_o     (tdo_cpu),
+        .tdi_i            (tdi_i),
 
-                  // TAP states
-                  .capture_dr_i     (capture_dr_i),
-                  .shift_dr_i       (shift_dr_i),
-                  .update_dr_i      (update_dr_i),
+        // TAP states
+        .capture_dr_i     (capture_dr_i),
+        .shift_dr_i       (shift_dr_i),
+        .update_dr_i      (update_dr_i),
 
-                  .data_register_i  (input_shift_reg[63:11]),
-                  .module_select_i  (module_selects[i+1]),
-                  .top_inhibit_o    (module_inhibit[i+1]),
-                  .trstn_i          (trstn_i),
+        .data_register_i  (input_shift_reg[63:7]),
+        .module_select_i  (module_selects[1]),
+        .top_inhibit_o    (module_inhibit[1]),
+        .trstn_i          (trstn_i),
 
-                  // CPU signals
-                  .cpu_clk_i        (axi_aclk),
-                  .cpu_rstn_i       (axi_aresetn),
-                  .cpu_addr_o       (cpu_addr_o[i]),
-                  .cpu_data_i       (cpu_data_i[i]),
-                  .cpu_data_o       (cpu_data_o[i]),
-                  .cpu_bp_i         (cpu_bp_i[i]),
-                  .cpu_stall_o      (cpu_stall_o[i]),
-                  .cpu_stb_o        (cpu_stb_o[i]),
-                  .cpu_we_o         (cpu_we_o[i]),
-                  .cpu_ack_i        (cpu_ack_i[i]),
-                  .cpu_rst_o        (cpu_rst_o[i])
-              );
-        end
-    endgenerate
+        // CPU signals
+        .cpu_clk_i        (axi_aclk),
+        .cpu_rstn_i       (axi_aresetn),
+        .cpu_addr_o       (cpu_addr_o),
+        .cpu_data_i       (cpu_data_i),
+        .cpu_data_o       (cpu_data_o),
+        .cpu_bp_i         (cpu_bp_i),
+        .cpu_stall_o      (cpu_stall_o),
+        .cpu_stb_o        (cpu_stb_o),
+        .cpu_we_o         (cpu_we_o),
+        .cpu_ack_i        (cpu_ack_i)
+    );
 
 
-assign select_inhibit = | module_inhibit;
+    assign select_inhibit = | module_inhibit;
 
-/////////////////////////////////////////////////
-// TDO output MUX
+    /////////////////////////////////////////////////
+    // TDO output MUX
 
-always @ (module_id_reg or tdo_axi or tdo_cpu)
-begin
-    if (module_id_reg == 0)
-        tdo_o <= tdo_axi;
-    else if(module_id_reg <= NB_CORES)
-        tdo_o <= tdo_cpu[module_id_reg-1];
-    else
-        tdo_o <= 1'b0;
-end
+    always @ (module_id_reg or tdo_axi or tdo_cpu)
+    begin
+        if (module_id_reg == 0)
+            tdo_o <= tdo_axi;
+        else if (module_id_reg == 1)
+            tdo_o <= tdo_cpu;
+        else
+            tdo_o <= 1'b0;
+    end
 
 
 endmodule
