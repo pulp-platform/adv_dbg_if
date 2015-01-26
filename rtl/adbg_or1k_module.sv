@@ -53,11 +53,11 @@
 // Changed names of all files and modules (prefixed an a, for advanced).  Cleanup, indenting.  No functional changes.
 //
 // Revision 1.7  2008/07/11 08:13:29  Nathan
-// Latch opcode on posedge, like other signals.  This fixes a problem 
-// when the module is used with a Xilinx BSCAN TAP.  Added signals to 
-// allow modules to inhibit latching of a new active module by the top 
-// module.  This allows the sub-modules to force the top level module 
-// to ignore the command present in the input shift register after e.g. 
+// Latch opcode on posedge, like other signals.  This fixes a problem
+// when the module is used with a Xilinx BSCAN TAP.  Added signals to
+// allow modules to inhibit latching of a new active module by the top
+// module.  This allows the sub-modules to force the top level module
+// to ignore the command present in the input shift register after e.g.
 // a burst read.
 //
 
@@ -66,7 +66,7 @@
 `include "adbg_or1k_defines.v"
 
 // Module interface
-module adbg_or1k_module #( 
+module adbg_or1k_module #(
 		parameter NB_CORES = 4
     ) (
     // JTAG signals
@@ -86,7 +86,7 @@ module adbg_or1k_module #(
 
     // Interface to OR1200 debug unit
     input                              cpu_clk_i,    // 'bus' style interface to SPRs
-    input                              cpu_rstn_i, 
+    input                              cpu_rstn_i,
     output logic [NB_CORES-1:0] [15:0] cpu_addr_o,
     input  logic [NB_CORES-1:0] [31:0] cpu_data_i,
     output logic [NB_CORES-1:0] [31:0] cpu_data_o,
@@ -145,7 +145,7 @@ module adbg_or1k_module #(
 
    // Intermediate signals
    wire [5:0]                   word_size_bits;         // 8,16, or 32.  Decoded from 'operation'
-   wire [2:0]                   address_increment;      // How much to add to the address counter each iteration 
+   wire [2:0]                   address_increment;      // How much to add to the address counter each iteration
    wire [32:0]                   incremented_address;   // value of address counter plus 'word_size'
    wire [31:0]                   data_to_addr_counter;  // output of the mux in front of the address counter inputs
    wire [15:0]                   data_to_word_counter;  // output of the mux in front of the byte counter input
@@ -211,21 +211,21 @@ module adbg_or1k_module #(
 
     always @ (posedge tck_i or negedge trstn_i)
     begin
-        if(~trstn_i) 
+        if(~trstn_i)
             internal_register_select = 'h0;
-        else if(regsel_ld_en) 
+        else if(regsel_ld_en)
             internal_register_select = reg_select_data;
     end
 
    ////////////////////////////////////////////////
    // CPU select register
-   // 
+   //
 
     always @ (posedge tck_i or negedge trstn_i)
     begin
-        if(~trstn_i) 
+        if(~trstn_i)
             cpu_select = 'h0;
-        else if(cpusel_ld_en) 
+        else if(cpusel_ld_en)
             cpu_select = cpu_select_in;
     end
 
@@ -233,14 +233,14 @@ module adbg_or1k_module #(
     // register.  However, to make the module expandable, it is included anyway.
     always @ (internal_register_select or internal_reg_status)
     begin
-        case(internal_register_select) 
-            `DBG_OR1K_INTREG_STATUS: 
+        case(internal_register_select)
+            `DBG_OR1K_INTREG_STATUS:
                 data_from_internal_reg = {{(32-NB_CORES){1'b0}}, internal_reg_status};
-          default: 
+          default:
                 data_from_internal_reg = {{(32-NB_CORES){1'b0}}, internal_reg_status};
         endcase
     end
-   
+
 
 
    ////////////////////////////////////////////////////////////////////
@@ -253,9 +253,9 @@ module adbg_or1k_module #(
    assign status_reg_wr = (intreg_ld_en & (reg_select_data == `DBG_OR1K_INTREG_STATUS));
 
    adbg_or1k_status_reg #(
-			.NB_CORES(NB_CORES)      
+			.NB_CORES(NB_CORES)
 			) or1k_statusreg_i (
-                     .data_i(status_reg_data), 
+                     .data_i(status_reg_data),
                      .we_i(status_reg_wr),
                      .tck_i(tck_i),
                      .bp_i(cpu_bp_i),
@@ -303,11 +303,11 @@ module adbg_or1k_module #(
     always @ (posedge tck_i or negedge trstn_i)
     begin
 
-        if(~trstn_i)             
+        if(~trstn_i)
             bit_count <= 6'h0;
-        else if(bit_ct_rst)  
+        else if(bit_ct_rst)
             bit_count <= 6'h0;
-        else if(bit_ct_en)    
+        else if(bit_ct_en)
             bit_count <= bit_count + 6'h1;
     end
 
@@ -340,35 +340,35 @@ module adbg_or1k_module #(
 
     always @ (posedge tck_i or negedge trstn_i)
     begin
-        if(~trstn_i) 
+        if(~trstn_i)
             data_out_shift_reg <= 32'h0;
-        else if(out_reg_ld_en) 
+        else if(out_reg_ld_en)
             data_out_shift_reg <= out_reg_data;
-        else if(out_reg_shift_en) 
+        else if(out_reg_shift_en)
             data_out_shift_reg <= {1'b0, data_out_shift_reg[31:1]};
     end
 
 
     always @ (tdo_output_sel or data_out_shift_reg[0] or biu_ready or crc_match or crc_serial_out)
     begin
-        if(tdo_output_sel == 2'h0) 
+        if(tdo_output_sel == 2'h0)
             module_tdo_o <= biu_ready;
-        else if(tdo_output_sel == 2'h1) 
+        else if(tdo_output_sel == 2'h1)
             module_tdo_o <= data_out_shift_reg[0];
-        else if(tdo_output_sel == 2'h2) 
+        else if(tdo_output_sel == 2'h2)
             module_tdo_o <= crc_match;
-        else 
+        else
             module_tdo_o <= crc_serial_out;
     end
 
    ////////////////////////////////////////
      // Bus Interface Unit (to OR1K SPR bus)
    // It is assumed that the BIU has internal registers, and will
-   // latch address, operation, and write data on rising clock edge 
+   // latch address, operation, and write data on rising clock edge
    // when strobe is asserted
 
    adbg_or1k_biu #(
-			.NB_CORES(NB_CORES)      
+			.NB_CORES(NB_CORES)
 			) or1k_biu_i (
                  // Debug interface signals
                  .tck_i           (tck_i),
@@ -381,7 +381,7 @@ module adbg_or1k_module #(
                  .rd_wrn_i        (rd_op),           // If 0, then write op
                  .rdy_o           (biu_ready),
                  //  This bus has no error signal
-                 
+
                  // OR1K SPR bus signals
                  .cpu_clk_i(cpu_clk_i),
                  .cpu_rstn_i(cpu_rstn_i),
@@ -403,7 +403,7 @@ module adbg_or1k_module #(
 
     adbg_crc32 or1k_crc_i
     (
-        .clk(tck_i), 
+        .clk(tck_i),
         .data(crc_data_in),
         .enable(crc_en),
         .shift(crc_shift_en),
@@ -432,17 +432,17 @@ module adbg_or1k_module #(
 
    // Determination of next state; purely combinatorial
    always @ (module_state or module_select_i or update_dr_i or capture_dr_i or shift_dr_i or operation_in[2]
-         or word_count_zero or bit_count_max or data_register_i[52] or bit_count_32 or biu_ready
+         or word_count_zero or bit_count_max or data_register_i[56] or bit_count_32 or biu_ready
          or module_cmd or intreg_write or decremented_word_count or burst_instruction)
      begin
     case(module_state)
       STATE_idle:
         begin
-           if(module_cmd && module_select_i && update_dr_i && burst_instruction && operation_in[2]) 
+           if(module_cmd && module_select_i && update_dr_i && burst_instruction && operation_in[2])
                 module_next_state <= STATE_Rbegin;
-           else if(module_cmd && module_select_i && update_dr_i && burst_instruction) 
+           else if(module_cmd && module_select_i && update_dr_i && burst_instruction)
                 module_next_state <= STATE_Wready;
-           else 
+           else
                 module_next_state <= STATE_idle;
         end
 
@@ -458,13 +458,13 @@ module adbg_or1k_module #(
         end
       STATE_Rstatus:
         begin
-           if(update_dr_i) module_next_state <= STATE_idle; 
+           if(update_dr_i) module_next_state <= STATE_idle;
            else if (biu_ready) module_next_state <= STATE_Rburst;
            else module_next_state <= STATE_Rstatus;
         end
       STATE_Rburst:
         begin
-           if(update_dr_i) module_next_state <= STATE_idle; 
+           if(update_dr_i) module_next_state <= STATE_idle;
            else if(bit_count_max && word_count_zero) module_next_state <= STATE_Rcrc;
            else if(bit_count_max) module_next_state <= STATE_Rstatus;
            else module_next_state <= STATE_Rburst;
@@ -473,7 +473,7 @@ module adbg_or1k_module #(
         begin
            if(update_dr_i) module_next_state <= STATE_idle;
            // This doubles as the 'recovery' state, so stay here until update_dr_i.
-           else module_next_state <= STATE_Rcrc;    
+           else module_next_state <= STATE_Rcrc;
         end
 
       STATE_Wready:
@@ -485,13 +485,13 @@ module adbg_or1k_module #(
       STATE_Wwait:
         begin
            if(update_dr_i)  module_next_state <= STATE_idle;  // client terminated early
-           else if(module_select_i && data_register_i[52]) module_next_state <= STATE_Wburst; // Got a start bit
+           else if(module_select_i && data_register_i[56]) module_next_state <= STATE_Wburst; // Got a start bit
            else module_next_state <= STATE_Wwait;
         end
       STATE_Wburst:
         begin
-           if(update_dr_i)  module_next_state <= STATE_idle;  // client terminated early    
-           else if(bit_count_max) 
+           if(update_dr_i)  module_next_state <= STATE_idle;  // client terminated early
+           else if(bit_count_max)
              begin
                 if(word_count_zero) module_next_state <= STATE_Wcrc;
                 else module_next_state <= STATE_Wburst;
@@ -500,26 +500,26 @@ module adbg_or1k_module #(
         end
       STATE_Wstatus:
         begin
-           if(update_dr_i)  module_next_state <= STATE_idle;  // client terminated early    
+           if(update_dr_i)  module_next_state <= STATE_idle;  // client terminated early
            else if(word_count_zero) module_next_state <= STATE_Wcrc;
            // can't wait until bus ready if multiple devices in chain...
            // Would have to read postfix_bits, then send another start bit and push it through
            // prefix_bits...potentially very inefficient.
            else module_next_state <= STATE_Wburst;
         end
-      
+
       STATE_Wcrc:
         begin
            if(update_dr_i)  module_next_state <= STATE_idle;  // client terminated early
            else if(bit_count_32) module_next_state <= STATE_Wmatch;
-           else module_next_state <= STATE_Wcrc;    
+           else module_next_state <= STATE_Wcrc;
         end
-      
+
       STATE_Wmatch:
         begin
            if(update_dr_i)  module_next_state <= STATE_idle;
            // This doubles as our recovery state, stay here until update_dr_i
-           else module_next_state <= STATE_Wmatch;    
+           else module_next_state <= STATE_Wmatch;
         end
 
       default: module_next_state <= STATE_idle;  // shouldn't actually happen...
@@ -559,10 +559,10 @@ module adbg_or1k_module #(
         begin
            addr_sel <= 1'b0;
            word_ct_sel <= 1'b0;
-           
+
            // Operations for internal registers - stay in idle state
            if(module_select_i & shift_dr_i) out_reg_shift_en <= 1'b1; // For module regs
-           if(module_select_i & capture_dr_i) 
+           if(module_select_i & capture_dr_i)
            begin
              out_reg_data_sel <= 1'b1;  // select internal register data
              out_reg_ld_en <= 1'b1;   // For module regs
@@ -572,7 +572,7 @@ module adbg_or1k_module #(
              if(intreg_write)       intreg_ld_en <= 1'b1;  // For module regs
              if(burst_instruction)  cpusel_ld_en <= 1'b1;
            end
-           
+
            // Burst operations
            if(module_next_state != STATE_idle) begin  // Do the same to receive read or write opcode
              addr_ct_en <= 1'b1;
@@ -594,13 +594,13 @@ module adbg_or1k_module #(
 
       STATE_Rready:
         ; // Just a wait state
-      
+
       STATE_Rstatus:
         begin
            tdo_output_sel <= 2'h0;
            top_inhibit_o <= 1'b1;    // in case of early termination
-           
-           if (module_next_state == STATE_Rburst) 
+
+           if (module_next_state == STATE_Rburst)
            begin
              out_reg_data_sel <= 1'b0;  // select BIU data
              out_reg_ld_en <= 1'b1;
@@ -624,7 +624,7 @@ module adbg_or1k_module #(
            crc_en <= 1'b1;
            crc_in_sel <= 1'b0;  // read data in output shift register LSB (tdo)
            top_inhibit_o <= 1'b1;    // in case of early termination
-           
+
            if(bit_count_max)
            begin
              out_reg_data_sel <= 1'b0;  // select BIU data
@@ -672,9 +672,9 @@ module adbg_or1k_module #(
            crc_en <= 1'b1;
            crc_in_sel <= 1'b1;  // read data from tdi_i
            top_inhibit_o <= 1'b1;    // in case of early termination
-           
-           // It would be better to do this in STATE_Wstatus, but we don't use that state 
-           // if ADBG_USE_HISPEED is defined.  
+
+           // It would be better to do this in STATE_Wstatus, but we don't use that state
+           // if ADBG_USE_HISPEED is defined.
            if(bit_count_max)
               begin
               bit_ct_rst <= 1'b1;  // Zero the bit count
@@ -700,14 +700,14 @@ module adbg_or1k_module #(
            addr_ct_en <= 1'b1;  // Increment thte address counter
            top_inhibit_o <= 1'b1;    // in case of early termination
         end
-      
+
       STATE_Wcrc:
         begin
                bit_ct_en <= 1'b1;
                top_inhibit_o <= 1'b1;    // in case of early termination
                if(module_next_state == STATE_Wmatch) tdo_output_sel <= 2'h2;  // This is when the 'match' bit is actually read
         end
-      
+
       STATE_Wmatch:
         begin
                tdo_output_sel <= 2'h2;
