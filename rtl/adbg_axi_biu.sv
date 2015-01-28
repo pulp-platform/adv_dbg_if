@@ -199,8 +199,8 @@ module adbg_axi_biu
 	  4'h2:
             begin
                if(addr_i[2:1] == 2'b00)      be_dec <= 8'b00000011;
-               else if(addr_i[1:0] == 2'b01) be_dec <= 8'b00001100;
-               else if(addr_i[1:0] == 2'b10) be_dec <= 8'b00110000;
+               else if(addr_i[2:1] == 2'b01) be_dec <= 8'b00001100;
+               else if(addr_i[2:1] == 2'b10) be_dec <= 8'b00110000;
                else                          be_dec <= 8'b11000000;
             end
 	  4'h4: 
@@ -267,24 +267,33 @@ module adbg_axi_biu
     end 
 
    // Create rdy_o output.  Set on reset, clear on strobe (if set), set on input toggle
-   always @ (posedge tck_i or negedge trstn_i)
-     begin
-	if(~trstn_i) begin
-           rdy_sync_tff1 <= 1'b0;
-           rdy_sync_tff2 <= 1'b0;
-           rdy_sync_tff2q <= 1'b0;
-           rdy_o <= 1'b1; 
-	end
-	else begin  
-	   rdy_sync_tff1 <= rdy_sync;       // Synchronize the ready signal across clock domains
-	   rdy_sync_tff2 <= rdy_sync_tff1;
-	   rdy_sync_tff2q <= rdy_sync_tff2;  // used to detect toggles
+    always @ (posedge tck_i or negedge trstn_i)
+    begin
+        if(~trstn_i) begin
+            rdy_sync_tff1 <= 1'b0;
+            rdy_sync_tff2 <= 1'b0;
+            rdy_sync_tff2q <= 1'b0;
+	    end
+	    else begin  
+	        rdy_sync_tff1 <= rdy_sync;       // Synchronize the ready signal across clock domains
+	        rdy_sync_tff2 <= rdy_sync_tff1;
+	        rdy_sync_tff2q <= rdy_sync_tff2;  // used to detect toggles
+        end
+    end 
 
-	   if(strobe_i && rdy_o) rdy_o <= 1'b0;
-	   else if(rdy_sync_tff2 != rdy_sync_tff2q) rdy_o <= 1'b1;
-	end
-
-     end 
+    always @ (posedge tck_i or negedge trstn_i)
+    begin
+	    if(~trstn_i) begin
+            rdy_o <= 1'b1; 
+	    end
+	    else 
+        begin  
+            if(strobe_i && rdy_o) 
+                rdy_o <= 1'b0;
+	        else if(rdy_sync_tff2 != rdy_sync_tff2q) 
+                rdy_o <= 1'b1;
+        end
+    end 
 
    //////////////////////////////////////////////////////////
    // Direct assignments, unsynchronized
