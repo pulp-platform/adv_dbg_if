@@ -451,7 +451,7 @@ module adbg_axi_module
    // latch address, operation, and write data on rising clock edge 
    // when strobe is asserted
 
-   assign biu_rst = trstn_i & ~biu_clr_err;
+   //assign biu_rst = trstn_i & ~biu_clr_err;  //TODO need to have a better way to clear BIU
 
    adbg_axi_biu #(
        .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
@@ -461,7 +461,8 @@ module adbg_axi_module
    ) axi_biu_i (
         // Debug interface signals
         .tck_i           (tck_i),
-        .trstn_i         (biu_rst),
+//        .trstn_i         (biu_rst),
+        .trstn_i         (trstn_i),
         .data_i          (data_to_biu),
         .data_o          (data_from_biu),
         .addr_i          (address_counter),
