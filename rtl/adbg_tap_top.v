@@ -202,8 +202,8 @@ assign debug_select_o = debug_select;
 `define STATE_exit2_ir         4'h8
 `define STATE_update_ir        4'hD
 
-reg [3:0] TAP_state = `STATE_test_logic_reset;  // current state of the TAP controller
-reg [3:0] next_TAP_state;  // state TAP will take at next rising TCK, combinational signal
+reg [3:0] TAP_state;          // FIXED NOT POSSIBLE IN SYNTHESIS -->  = `STATE_test_logic_reset;  // current state of the TAP controller
+reg [3:0] next_TAP_state;     // state TAP will take at next rising TCK, combinational signal
 
 // sequential part of the FSM
 always @ (posedge tck_pad_i or negedge trstn_pad_i)
