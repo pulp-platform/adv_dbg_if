@@ -167,7 +167,7 @@ module adbg_or1k_module #(
     logic          [3:0] cpu_select;
     logic          [3:0] cpu_select_in;
 
-    logic [NB_CORES-1:0] status_reg_data;
+    logic [15:0] status_reg_data;
 
    // Definition of machine state values.
    // Don't worry too much about the state encoding, the synthesis tool
@@ -186,7 +186,7 @@ module adbg_or1k_module #(
     assign data_to_biu     = {tdi_i,data_register_i[56:26]};
 
     assign reg_select_data = data_register_i[51:49];
-    assign status_reg_data = data_register_i[48:(48-NB_CORES+1)];
+    assign status_reg_data = data_register_i[48:33];
 
    ////////////////////////////////////////////////
           // Operation decoder
