@@ -466,7 +466,6 @@ module adbg_or1k_module #(
         begin
            if(update_dr_i) module_next_state <= STATE_idle;
            else if(bit_count_max && word_count_zero) module_next_state <= STATE_Rcrc;
-           else if(bit_count_max) module_next_state <= STATE_Rstatus;
            else module_next_state <= STATE_Rburst;
         end
       STATE_Rcrc:
