@@ -542,7 +542,7 @@ module adbg_axi_module
       .serial_out(crc_serial_out)
       );
 
-   assign     crc_match = (data_register_i[52:21] == crc_data_out) ? 1'b1 : 1'b0;
+   assign     crc_match = (data_register_i[63:32] == crc_data_out) ? 1'b1 : 1'b0;
 
    ////////////////////////////////////////
    // Control FSM
