@@ -13,6 +13,8 @@ module adv_dbg_if
        output logic                    tdo_pad_o, 
        output logic                    tdo_padoe_o,
 
+       input  logic                    test_mode_i,
+
         // CPU signals
         input  logic [NB_CORES-1:0]        cpu_clk_i,
         output logic [NB_CORES-1:0] [15:0] cpu_addr_o, 
@@ -105,6 +107,8 @@ module adv_dbg_if
                 .tdi_pad_i(tdi_pad_i), 
                 .tdo_pad_o(tdo_pad_o), 
                 .tdo_padoe_o(tdo_padoe_o),
+
+                .test_mode_i(test_mode_i),
 
                 // TAP states
 				.test_logic_reset_o(s_test_logic_reset),

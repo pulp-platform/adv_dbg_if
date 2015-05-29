@@ -79,6 +79,8 @@ module adbg_tap_top(
                 tdo_pad_o, 
                 tdo_padoe_o,
 
+                test_mode_i,
+
                 // TAP states
 				test_logic_reset_o,
 				run_test_idle_o,
@@ -162,6 +164,10 @@ reg     bypass_select;
 // TDO and enable
 reg     tdo_pad_o;
 reg     tdo_padoe_o;
+
+wire    s_clk_neg;
+
+assign s_clk_neg = (test_mode_i) ? tck_pad_i : ~tck_pad_i;
 
 assign tdi_o = tdi_pad_i;
 
@@ -379,7 +385,7 @@ assign instruction_tdo = jtag_ir[0];  // This is latched on a negative TCK edge 
 
 // Updating jtag_ir (Instruction Register)
 // jtag_ir should be latched on FALLING EDGE of TCK when capture_ir == 1
-always @ (negedge tck_pad_i or negedge trstn_pad_i)
+always @ (posedge s_clk_neg or negedge trstn_pad_i)
 begin
   if(trstn_pad_i == 0)
     latched_jtag_ir <= `IDCODE;   // IDCODE selected after reset
@@ -510,16 +516,22 @@ end
 
 
 // TDO changes state at negative edge of TCK
-always @ (negedge tck_pad_i)
+always @ (posedge s_clk_neg or negedge trstn_pad_i)
 begin
-	tdo_pad_o = tdo_mux_out;
+  if (trstn_pad_i == 0)
+    tdo_pad_o = 1'b0;
+  else
+    tdo_pad_o = tdo_mux_out;
 end
 
 
 // Tristate control for tdo_pad_o pin
-always @ (posedge tck_pad_i)
+always @ (posedge s_clk_neg or negedge trstn_pad_i)
 begin
-  tdo_padoe_o <= shift_ir | shift_dr;
+  if (trstn_pad_i == 0)
+    tdo_pad_o = 1'b0;
+  else
+    tdo_padoe_o <= shift_ir | shift_dr;
 end
 /**********************************************************************************
 *                                                                                 *
