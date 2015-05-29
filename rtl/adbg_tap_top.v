@@ -168,8 +168,15 @@ reg     tdo_pad_o;
 reg     tdo_padoe_o;
 
 wire    s_clk_neg;
+wire    s_tck_inv;
 
-assign s_clk_neg = (test_mode_i) ? tck_pad_i : ~tck_pad_i;
+cluster_clock_inverter u_clk_inv (.clk_i(tck_pad_i), .clk_o(s_tck_inv));
+cluster_clock_mux2 u_clk_mux(
+    .clk0_i(tck_pad_i),
+    .clk1_i(s_tck_inv),
+    .clk_sel_i(test_mode_i),
+    .clk_o(s_clk_neg)
+);
 
 assign tdi_o = tdi_pad_i;
 
@@ -531,7 +538,7 @@ end
 always @ (posedge s_clk_neg or negedge trstn_pad_i)
 begin
   if (trstn_pad_i == 0)
-    tdo_pad_o = 1'b0;
+    tdo_padoe_o = 1'b0;
   else
     tdo_padoe_o <= shift_ir | shift_dr;
 end
