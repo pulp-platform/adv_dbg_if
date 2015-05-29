@@ -528,9 +528,9 @@ end
 always @ (posedge s_clk_neg or negedge trstn_pad_i)
 begin
   if (trstn_pad_i == 0)
-    tdo_pad_o = 1'b0;
+    tdo_pad_o <= 1'b0;
   else
-    tdo_pad_o = tdo_mux_out;
+    tdo_pad_o <= tdo_mux_out;
 end
 
 
@@ -538,7 +538,7 @@ end
 always @ (posedge s_clk_neg or negedge trstn_pad_i)
 begin
   if (trstn_pad_i == 0)
-    tdo_padoe_o = 1'b0;
+    tdo_padoe_o <= 1'b0;
   else
     tdo_padoe_o <= shift_ir | shift_dr;
 end
