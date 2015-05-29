@@ -172,8 +172,8 @@ wire    s_tck_inv;
 
 cluster_clock_inverter u_clk_inv (.clk_i(tck_pad_i), .clk_o(s_tck_inv));
 cluster_clock_mux2 u_clk_mux(
-    .clk0_i(tck_pad_i),
-    .clk1_i(s_tck_inv),
+    .clk0_i(s_tck_inv),
+    .clk1_i(tck_pad_i),
     .clk_sel_i(test_mode_i),
     .clk_o(s_clk_neg)
 );
