@@ -204,8 +204,8 @@ module adbg_axi_module
    wire                        [31:0] address_data_in;         // from data_register_i
    wire                        [15:0] count_data_in;           // from data_register_i
    wire                         [3:0] operation_in;            // from data_register_i
-   wire                        [AXI_DATA_WIDTH-1:0] data_to_biu;             // from data_register_i
-   wire                        [AXI_DATA_WIDTH-1:0] data_from_biu;           // to data_out_shift_register
+   wire                        [63:0] data_to_biu;             // from data_register_i
+   wire                        [63:0]               data_from_biu;           // to data_out_shift_register
    wire                        [31:0] crc_data_out;            // output of CRC module, to output shift register
    wire                               crc_data_in;             // input to CRC module, either data_register_i[52] or data_out_shift_reg[0]
    wire                               crc_serial_out;

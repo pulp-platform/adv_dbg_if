@@ -73,8 +73,8 @@ module adbg_axi_biu
    // Debug interface signals
 		input  logic                        tck_i,
 		input  logic                        trstn_i,
-		input  logic                 [63:0] data_i,
-		output logic                 [63:0] data_o,
+		input  logic [63:0]                 data_i,
+		output logic [63:0]                 data_o,
 		input  logic                 [31:0] addr_i,
 		input  logic                        strobe_i,
 		input  logic                        rd_wrn_i,           // If 0, then write op
@@ -174,71 +174,150 @@ module adbg_axi_biu
    //AXI4 FSM states
    enum logic [1:0] {S_IDLE,S_AXIADDR,S_AXIDATA,S_AXIRESP} axi_fsm_state,next_fsm_state;
 
-   //////////////////////////////////////////////////////
-   // TCK clock domain
-   // There is no FSM here, just signal latching and clock
-   // domain synchronization
+
 
    // Create byte enable signals from word_size and address (combinatorial)
    // This uses LITTLE ENDIAN byte ordering...lowest-addressed bytes is the
    // least-significant byte of the 32-bit WB bus.
-   always @ (word_size_i or addr_i)
-     begin
-	case (word_size_i)
-	  4'h1:
-            begin
-               if(addr_i[2:0] == 3'b000)      be_dec <= 8'b00000001;
-               else if(addr_i[2:0] == 3'b001) be_dec <= 8'b00000010;
-               else if(addr_i[2:0] == 3'b010) be_dec <= 8'b00000100;
-               else if(addr_i[2:0] == 3'b011) be_dec <= 8'b00001000;
-               else if(addr_i[2:0] == 3'b100) be_dec <= 8'b00010000;
-               else if(addr_i[2:0] == 3'b101) be_dec <= 8'b00100000;
-               else if(addr_i[2:0] == 3'b110) be_dec <= 8'b01000000;
-               else                           be_dec <= 8'b10000000;
-            end
-	  4'h2:
-            begin
-               if(addr_i[2:1] == 2'b00)      be_dec <= 8'b00000011;
-               else if(addr_i[2:1] == 2'b01) be_dec <= 8'b00001100;
-               else if(addr_i[2:1] == 2'b10) be_dec <= 8'b00110000;
-               else                          be_dec <= 8'b11000000;
-            end
-	  4'h4: 
-            begin
-               if(addr_i[2] == 1'b0)         be_dec <= 8'b00001111;
-               else                          be_dec <= 8'b11110000;
-            end
-	  4'h8: 
-            be_dec <= 8'b11111111;
-	  default: be_dec <= 8'b11111111;  // default to 64-bit access
-	endcase 
-     end
+  always @ (word_size_i or addr_i)
+  begin
+    if (AXI_DATA_WIDTH == 64)
+    begin
+      case (word_size_i)
+        4'h1:
+          begin
+            if(addr_i[2:0] == 3'b000)      be_dec <= 8'b00000001;
+            else if(addr_i[2:0] == 3'b001) be_dec <= 8'b00000010;
+            else if(addr_i[2:0] == 3'b010) be_dec <= 8'b00000100;
+            else if(addr_i[2:0] == 3'b011) be_dec <= 8'b00001000;
+            else if(addr_i[2:0] == 3'b100) be_dec <= 8'b00010000;
+            else if(addr_i[2:0] == 3'b101) be_dec <= 8'b00100000;
+            else if(addr_i[2:0] == 3'b110) be_dec <= 8'b01000000;
+            else                           be_dec <= 8'b10000000;
+          end
+        4'h2:
+          begin
+            if(addr_i[2:1] == 2'b00)      be_dec <= 8'b00000011;
+            else if(addr_i[2:1] == 2'b01) be_dec <= 8'b00001100;
+            else if(addr_i[2:1] == 2'b10) be_dec <= 8'b00110000;
+            else                          be_dec <= 8'b11000000;
+          end
+        4'h4: 
+          begin
+            if(addr_i[2] == 1'b0)         be_dec <= 8'b00001111;
+            else                          be_dec <= 8'b11110000;
+          end
+        4'h8: 
+                                          be_dec <= 8'b11111111;
+        default:                          be_dec <= 8'b11111111;  // default to 64-bit access
+      endcase
+    end
+    else if (AXI_DATA_WIDTH == 32)
+    begin
+      case (word_size_i)
+        4'h1:
+          begin
+            if(addr_i[1:0] == 2'b00)       be_dec <= 4'b0001;
+            else if(addr_i[1:0] == 2'b01)  be_dec <= 4'b0010;
+            else if(addr_i[1:0] == 2'b10)  be_dec <= 4'b0100;
+            else                           be_dec <= 4'b1000;
+          end
+        4'h2:
+          begin
+            if(addr_i[1] == 1'b0)          be_dec <= 4'b0011;
+            else                           be_dec <= 4'b1100;
+          end
+        4'h4:
+                                           be_dec <= 4'b1111;
+        4'h8:
+                                           be_dec <= 4'b1111;  //error if it happens
+        default:                           be_dec <= 4'b1111;  // default to 32-bit access
+      endcase // word_size_i
+    end
+  end
 
 
    // Byte- or word-swap data as necessary.  Use the non-latched be_dec signal,
    // since it and the swapped data will be latched at the same time.
    // Remember that since the data is shifted in LSB-first, shorter words
    // will be in the high-order bits. (combinatorial)
-   always @ (be_dec or data_i)
-     begin
-	case (be_dec)
-	  8'b00001111: swapped_data_i <= {32'h0, data_i[63:32]};
-	  8'b11110000: swapped_data_i <= {       data_i[63:32],  32'h0};
-	  8'b00000011: swapped_data_i <= {48'h0, data_i[63:48]};
-	  8'b00001100: swapped_data_i <= {32'h0, data_i[63:48], 16'h0};
-	  8'b00110000: swapped_data_i <= {16'h0, data_i[63:48], 32'h0};
-	  8'b11000000: swapped_data_i <= {       data_i[63:48], 48'h0};
-	  8'b00000001: swapped_data_i <= {56'h0, data_i[63:56]};
-	  8'b00000010: swapped_data_i <= {48'h0, data_i[63:56],  8'h0};
-	  8'b00000100: swapped_data_i <= {40'h0, data_i[63:56], 16'h0};
-	  8'b00001000: swapped_data_i <= {32'h0, data_i[63:56], 24'h0};
-	  8'b00010000: swapped_data_i <= {24'h0, data_i[63:56], 32'h0};
-	  8'b00100000: swapped_data_i <= {16'h0, data_i[63:56], 40'h0};
-	  8'b01000000: swapped_data_i <= { 8'h0, data_i[63:56], 48'h0};
-	  8'b10000000: swapped_data_i <= {       data_i[63:56], 56'h0};
-	  default: swapped_data_i <= data_i;  // Shouldn't be possible
-	endcase
-     end
+  always @ (be_dec or data_i)
+  begin
+    if (AXI_DATA_WIDTH == 64)
+    begin
+      case (be_dec)
+        8'b00001111: swapped_data_i <= {32'h0, data_i[63:32]};
+        8'b11110000: swapped_data_i <= {       data_i[63:32],  32'h0};
+        8'b00000011: swapped_data_i <= {48'h0, data_i[63:48]};
+        8'b00001100: swapped_data_i <= {32'h0, data_i[63:48], 16'h0};
+        8'b00110000: swapped_data_i <= {16'h0, data_i[63:48], 32'h0};
+        8'b11000000: swapped_data_i <= {       data_i[63:48], 48'h0};
+        8'b00000001: swapped_data_i <= {56'h0, data_i[63:56]};
+        8'b00000010: swapped_data_i <= {48'h0, data_i[63:56],  8'h0};
+        8'b00000100: swapped_data_i <= {40'h0, data_i[63:56], 16'h0};
+        8'b00001000: swapped_data_i <= {32'h0, data_i[63:56], 24'h0};
+        8'b00010000: swapped_data_i <= {24'h0, data_i[63:56], 32'h0};
+        8'b00100000: swapped_data_i <= {16'h0, data_i[63:56], 40'h0};
+        8'b01000000: swapped_data_i <= { 8'h0, data_i[63:56], 48'h0};
+        8'b10000000: swapped_data_i <= {       data_i[63:56], 56'h0};
+        default:     swapped_data_i <=         data_i;
+      endcase
+    end
+    else if (AXI_DATA_WIDTH == 32)
+    begin
+      case (be_dec)
+        4'b1111: swapped_data_i <=         data_i[63:32];
+        4'b0011: swapped_data_i <= {16'h0, data_i[63:48]};
+        4'b1100: swapped_data_i <= {       data_i[63:48], 16'h0};
+        4'b0001: swapped_data_i <= {24'h0, data_i[63:56]};
+        4'b0010: swapped_data_i <= {16'h0, data_i[63:56],  8'h0};
+        4'b0100: swapped_data_i <= {8'h0,  data_i[63:56], 16'h0};
+        4'b1000: swapped_data_i <= {       data_i[63:56], 24'h0};
+        default: swapped_data_i <=         data_i[63:32];
+      endcase
+    end
+  end
+
+   // Byte- or word-swap the WB->dbg data, as necessary (combinatorial)
+   // We assume bits not required by SEL are don't care.  We reuse assignments
+   // where possible to keep the MUX smaller.  (combinatorial)
+  always @ (sel_reg or axi_master_r_data)
+  begin
+    if (AXI_DATA_WIDTH == 64)
+    begin
+      case (sel_reg)
+        8'b00001111: swapped_data_out <=         axi_master_r_data;
+        8'b11110000: swapped_data_out <= {32'h0, axi_master_r_data[63:32]};
+        8'b00000011: swapped_data_out <=         axi_master_r_data;
+        8'b00001100: swapped_data_out <= {16'h0, axi_master_r_data[63:16]};
+        8'b00110000: swapped_data_out <= {32'h0, axi_master_r_data[63:32]};
+        8'b11000000: swapped_data_out <= {48'h0, axi_master_r_data[63:48]};
+        8'b00000001: swapped_data_out <=         axi_master_r_data;
+        8'b00000010: swapped_data_out <= {8'h0,  axi_master_r_data[63:8]};
+        8'b00000100: swapped_data_out <= {16'h0, axi_master_r_data[63:16]};
+        8'b00001000: swapped_data_out <= {24'h0, axi_master_r_data[63:24]};
+        8'b00010000: swapped_data_out <= {32'h0, axi_master_r_data[63:32]};
+        8'b00100000: swapped_data_out <= {40'h0, axi_master_r_data[63:40]};
+        8'b01000000: swapped_data_out <= {48'h0, axi_master_r_data[63:48]};
+        8'b10000000: swapped_data_out <= {56'h0, axi_master_r_data[63:56]};
+        default:     swapped_data_out <=         axi_master_r_data;
+      endcase
+    end
+    else if (AXI_DATA_WIDTH == 32)
+    begin
+      case (sel_reg)
+        4'b1111: swapped_data_out <=         axi_master_r_data;
+        4'b0011: swapped_data_out <=         axi_master_r_data;
+        4'b1100: swapped_data_out <= {16'h0, axi_master_r_data[31:16]};
+        4'b0001: swapped_data_out <=         axi_master_r_data;
+        4'b0010: swapped_data_out <= {8'h0,  axi_master_r_data[31:8]};
+        4'b0100: swapped_data_out <= {16'h0, axi_master_r_data[31:16]};
+        4'b1000: swapped_data_out <= {24'h0, axi_master_r_data[31:24]};
+        default: swapped_data_out <=         axi_master_r_data;
+      endcase
+    end
+  end
+
 
    // Latch input data on 'start' strobe, if ready.
    always @ (posedge tck_i or negedge trstn_i)
@@ -304,7 +383,14 @@ module adbg_axi_biu
    assign axi_master_w_data  = data_in_reg;
    assign axi_master_w_strb  = sel_reg;
 
-   assign data_o = data_out_reg;
+  always_comb
+  begin
+    if (AXI_DATA_WIDTH == 64)
+      data_o = data_out_reg;
+    else if (AXI_DATA_WIDTH == 32)
+      data_o = {32'h0,data_out_reg};
+  end
+
    assign err_o  = err_reg;
 
     assign axi_master_aw_prot   = 'h0;
@@ -389,30 +475,6 @@ module adbg_axi_biu
      begin
 	if(!axi_aresetn) err_reg <= 1'b0;
 	else if(err_en) err_reg <= wr_reg ? ((axi_master_b_resp == 2'b00) ? 1'b0 : 1'b1) : ((axi_master_r_resp == 2'b00) ? 1'b0 : 1'b1); 
-     end
-
-   // Byte- or word-swap the WB->dbg data, as necessary (combinatorial)
-   // We assume bits not required by SEL are don't care.  We reuse assignments
-   // where possible to keep the MUX smaller.  (combinatorial)
-   always @ (sel_reg or axi_master_r_data)
-     begin
-	case (sel_reg)
-	  8'b00001111: swapped_data_out <= axi_master_r_data;
-	  8'b11110000: swapped_data_out <= {32'h0, axi_master_r_data[63:32]};
-	  8'b00000011: swapped_data_out <= axi_master_r_data;
-	  8'b00001100: swapped_data_out <= {16'h0, axi_master_r_data[63:16]};
-	  8'b00110000: swapped_data_out <= {32'h0, axi_master_r_data[63:32]};
-	  8'b11000000: swapped_data_out <= {48'h0, axi_master_r_data[63:48]};
-	  8'b00000001: swapped_data_out <= axi_master_r_data;
-	  8'b00000010: swapped_data_out <= {8'h0,  axi_master_r_data[63:8]};
-	  8'b00000100: swapped_data_out <= {16'h0, axi_master_r_data[63:16]};
-	  8'b00001000: swapped_data_out <= {24'h0, axi_master_r_data[63:24]};
-	  8'b00010000: swapped_data_out <= {32'h0, axi_master_r_data[63:32]};
-	  8'b00100000: swapped_data_out <= {40'h0, axi_master_r_data[63:40]};
-	  8'b01000000: swapped_data_out <= {48'h0, axi_master_r_data[63:48]};
-	  8'b10000000: swapped_data_out <= {56'h0, axi_master_r_data[63:56]};
-	  default: swapped_data_out <= axi_master_r_data;  
-	endcase
      end
 
    // WB->dbg data register
