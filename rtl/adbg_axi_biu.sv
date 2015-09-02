@@ -281,9 +281,8 @@ module adbg_axi_biu
    // Byte- or word-swap the WB->dbg data, as necessary (combinatorial)
    // We assume bits not required by SEL are don't care.  We reuse assignments
    // where possible to keep the MUX smaller.  (combinatorial)
-  always @ (sel_reg or axi_master_r_data)
-  begin
-    if (AXI_DATA_WIDTH == 64)
+  generate if (AXI_DATA_WIDTH == 65) begin
+    always @ (sel_reg or axi_master_r_data)
     begin
       case (sel_reg)
         8'b00001111: swapped_data_out <=         axi_master_r_data;
@@ -303,7 +302,8 @@ module adbg_axi_biu
         default:     swapped_data_out <=         axi_master_r_data;
       endcase
     end
-    else if (AXI_DATA_WIDTH == 32)
+  end else if (AXI_DATA_WIDTH == 32) begin
+    always @ (sel_reg or axi_master_r_data)
     begin
       case (sel_reg)
         4'b1111: swapped_data_out <=         axi_master_r_data;
@@ -317,6 +317,7 @@ module adbg_axi_biu
       endcase
     end
   end
+  endgenerate
 
 
    // Latch input data on 'start' strobe, if ready.
