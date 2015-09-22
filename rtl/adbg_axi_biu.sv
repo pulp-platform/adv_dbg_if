@@ -281,7 +281,7 @@ module adbg_axi_biu
    // Byte- or word-swap the WB->dbg data, as necessary (combinatorial)
    // We assume bits not required by SEL are don't care.  We reuse assignments
    // where possible to keep the MUX smaller.  (combinatorial)
-  generate if (AXI_DATA_WIDTH == 65) begin
+  generate if (AXI_DATA_WIDTH == 64) begin
     always @ (sel_reg or axi_master_r_data)
     begin
       case (sel_reg)
