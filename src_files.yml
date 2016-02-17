@@ -1,6 +1,6 @@
 adv_dbg_if:
   incdirs: [
-    .,
+    rtl,
   ]
   files: [
     rtl/adbg_axi_biu.sv,
