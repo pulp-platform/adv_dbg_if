@@ -371,10 +371,17 @@ module adbg_lint_biu
       end
       S_DATA:
       begin
+        lint_req_o = 1'b1;
         if (wr_reg)
           lint_wen_o = 1'b0;
-          lint_req_o = 1'b1;
-          if (lint_gnt_i)
+        if (lint_gnt_i)
+          if (wr_reg)
+          begin
+            next_fsm_state = S_IDLE;
+            rdy_sync_en    = 1'b1;
+            err_en         = 1'b1;
+          end
+          else
             next_fsm_state = S_RESP;
       end
       S_RESP:
