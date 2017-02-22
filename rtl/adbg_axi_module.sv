@@ -226,7 +226,7 @@ module adbg_axi_module
 
    assign     data_to_biu = {tdi_i,data_register_i[63:1]};
 
-   assign     reg_select_data = data_register_i[58:57];
+   assign     reg_select_data = data_register_i[58:57]; //FIXME ANTONIO: LHS is 1 bit, RHS is 2 bit 
 
    ////////////////////////////////////////////////
           // Operation decoder
