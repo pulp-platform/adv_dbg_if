@@ -268,14 +268,14 @@ end
     /////////////////////////////////////////////////
     // TDO output MUX
 
-    always @ (module_id_reg or tdo_axi or tdo_cpu)
+    always_comb //@ (module_id_reg or tdo_axi or tdo_cpu)
     begin
         if (module_id_reg == 0)
-            tdo_o <= tdo_axi;
+            tdo_o = tdo_axi;
         else if (module_id_reg == 1)
-            tdo_o <= tdo_cpu;
+            tdo_o = tdo_cpu;
         else
-            tdo_o <= 1'b0;
+            tdo_o = 1'b0;
     end
 
 
