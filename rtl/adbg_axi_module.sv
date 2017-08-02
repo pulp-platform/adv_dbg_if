@@ -226,7 +226,7 @@ module adbg_axi_module
 
    assign     data_to_biu = {tdi_i,data_register_i[63:1]};
 
-   assign     reg_select_data = data_register_i[58:57]; //FIXME ANTONIO: LHS is 1 bit, RHS is 2 bit 
+   assign     reg_select_data = data_register_i[58:57];
 
    ////////////////////////////////////////////////
           // Operation decoder
@@ -250,42 +250,42 @@ module adbg_axi_module
    always_comb
    begin
         case(operation)
-       
+
        `DBG_AXI_CMD_BWRITE8:
         begin
            word_size_bits  = 6'd7;  // Bits is actually bits-1, to make the FSM easier
            word_size_bytes = 4'd1;
            rd_op           = 1'b0;
         end
-        
+
        `DBG_AXI_CMD_BWRITE16:
         begin
            word_size_bits  = 6'd15;  // Bits is actually bits-1, to make the FSM easier
            word_size_bytes = 4'd2;
            rd_op           = 1'b0;
         end
-        
+
        `DBG_AXI_CMD_BWRITE32:
         begin
            word_size_bits  = 6'd31;  // Bits is actually bits-1, to make the FSM easier
            word_size_bytes = 4'd4;
            rd_op           = 1'b0;
         end
-        
+
        `DBG_AXI_CMD_BWRITE64:
         begin
            word_size_bits  = 6'd63;  // Bits is actually bits-1, to make the FSM easier
            word_size_bytes = 4'd8;
            rd_op           = 1'b0;
         end
-       
+
        `DBG_AXI_CMD_BREAD8:
         begin
            word_size_bits  = 6'd7;  // Bits is actually bits-1, to make the FSM easier
            word_size_bytes = 4'd1;
            rd_op           = 1'b1;
         end
-       
+
        `DBG_AXI_CMD_BREAD16:
         begin
            word_size_bits  = 6'd15;  // Bits is actually bits-1, to make the FSM easier
@@ -298,22 +298,22 @@ module adbg_axi_module
            word_size_bits  = 6'd31;  // Bits is actually bits-1, to make the FSM easier
            word_size_bytes = 4'd4;
            rd_op           = 1'b1;
-        end        
-       
+        end
+
        `DBG_AXI_CMD_BREAD64:
         begin
            word_size_bits  = 6'd63;  // Bits is actually bits-1, to make the FSM easier
            word_size_bytes = 4'd4;
            rd_op           = 1'b1;
-        end        
-       
+        end
+
         default:
         begin
            word_size_bits  = 6'b00_0000;
            word_size_bytes = 4'b0000;
            rd_op           = 1'b0;
-        end       
-        
+        end
+
         endcase
    end
 
@@ -336,13 +336,11 @@ module adbg_axi_module
    // register.  However, to make the module expandable, it is included anyway.
    always_comb
    begin
-      case(internal_register_select) 
+      case(internal_register_select)
       `DBG_AXI_INTREG_ERROR: data_from_internal_reg = internal_reg_error;
       default:               data_from_internal_reg = internal_reg_error;
       endcase
    end
-   
-
 
    ////////////////////////////////////////////////////////////////////
    // Module-internal registers
@@ -364,17 +362,17 @@ module adbg_axi_module
             internal_reg_error <= 33'h0;
         else if(intreg_ld_en && (reg_select_data == `DBG_AXI_INTREG_ERROR))  // do load from data input register
              begin
-                if(data_register_i[46]) 
+                if(data_register_i[46])
                    internal_reg_error[0] <= 1'b0;  // if write data is 1, reset the error bit
              end
              else if(error_reg_en && !internal_reg_error[0])
                   begin
                      if(biu_err || (!biu_ready))
-                        internal_reg_error[0] <= 1'b1;        
+                        internal_reg_error[0] <= 1'b1;
                      else if(biu_strobe)
                               internal_reg_error[32:1] <= address_counter;
                   end
-                  else if(biu_strobe && !internal_reg_error[0]) 
+                  else if(biu_strobe && !internal_reg_error[0])
                            internal_reg_error[32:1] <= address_counter;  // When no error, latch this whether error_reg_en or not
     end
 
@@ -587,7 +585,7 @@ module adbg_axi_module
                 module_next_state = STATE_Rbegin;
            else if(module_cmd && module_select_i && update_dr_i && burst_write) 
                     module_next_state = STATE_Wready;
-                else 
+                else
                     module_next_state = STATE_idle;
        end
 
@@ -595,7 +593,7 @@ module adbg_axi_module
       begin
          if(word_count_zero)
             module_next_state = STATE_idle;  // set up a burst of size 0, illegal.
-         else 
+         else
             module_next_state = STATE_Rready;
       end
 
@@ -610,30 +608,30 @@ module adbg_axi_module
       STATE_Rstatus:
       begin
          if(update_dr_i)
-            module_next_state = STATE_idle; 
+            module_next_state = STATE_idle;
          else  if (biu_ready)
                   module_next_state = STATE_Rburst;
-               else 
+               else
                   module_next_state = STATE_Rstatus;
       end
 
       STATE_Rburst:
       begin
            if(update_dr_i)
-               module_next_state = STATE_idle; 
+               module_next_state = STATE_idle;
            else  if(bit_count_max && word_count_zero)
                     module_next_state = STATE_Rcrc;
                  else
                     module_next_state = STATE_Rburst;
       end
-      
+
       STATE_Rcrc:
       begin
            if(update_dr_i)
                module_next_state = STATE_idle;
            // This doubles as the 'recovery' state, so stay here until update_dr_i.
             else 
-               module_next_state = STATE_Rcrc;    
+               module_next_state = STATE_Rcrc;
       end
 
       STATE_Wready:
@@ -645,7 +643,7 @@ module adbg_axi_module
                else
                   module_next_state = STATE_Wready;
       end
-      
+
       STATE_Wwait:
       begin
            if(update_dr_i)
@@ -670,7 +668,7 @@ module adbg_axi_module
                      else 
                         module_next_state = STATE_Wburst;
       end
-      
+
       STATE_Wstatus:
       begin
            if(update_dr_i)
@@ -683,19 +681,19 @@ module adbg_axi_module
                 else 
                   module_next_state = STATE_Wburst;
       end
-      
+
       STATE_Wcrc:
       begin
            if(update_dr_i)  module_next_state = STATE_idle;  // client terminated early
            else if(bit_count_32) module_next_state = STATE_Wmatch;
-           else module_next_state = STATE_Wcrc;    
+           else module_next_state = STATE_Wcrc;
       end
-      
+
       STATE_Wmatch:
       begin
            if(update_dr_i)  module_next_state = STATE_idle;
            // This doubles as our recovery state, stay here until update_dr_i
-           else module_next_state = STATE_Wmatch;    
+           else module_next_state = STATE_Wmatch;
       end
 
       default: module_next_state = STATE_idle;  // shouldn't actually happen...
@@ -734,25 +732,25 @@ module adbg_axi_module
       begin
          addr_sel    = 1'b0;
          word_ct_sel = 1'b0;
-        
+
          // Operations for internal registers - stay in idle state
-         if(module_select_i & shift_dr_i) 
+         if(module_select_i & shift_dr_i)
              out_reg_shift_en = 1'b1; // For module regs
-         if(module_select_i & capture_dr_i) 
+         if(module_select_i & capture_dr_i)
          begin
              out_reg_data_sel = 1'b1;  // select internal register data
              out_reg_ld_en = 1'b1;   // For module regs
          end
-         if(module_select_i & module_cmd & update_dr_i) 
+         if(module_select_i & module_cmd & update_dr_i)
          begin
              if(intreg_instruction) 
                  regsel_ld_en = 1'b1;  // For module regs
              if(intreg_write)       
                  intreg_ld_en = 1'b1;  // For module regs
          end
-        
+
          // Burst operations
-         if(module_next_state != STATE_idle) 
+         if(module_next_state != STATE_idle)
          begin  // Do the same to receive read or write opcode
              addr_ct_en = 1'b1;
              op_reg_en  = 1'b1;
@@ -779,7 +777,7 @@ module adbg_axi_module
       begin
            tdo_output_sel  = 2'h0;
            top_inhibit_o   = 1'b1;    // in case of early termination
-           
+
            if (module_next_state == STATE_Rburst)
            begin
              error_reg_en     = 1'b1;       // Check the wb_error bit
@@ -805,7 +803,7 @@ module adbg_axi_module
         crc_en             = 1'b1;
         crc_in_sel         = 1'b0;  // read data in output shift register LSB (tdo)
         top_inhibit_o      = 1'b1;  // in case of early termination
-        
+
         if(bit_count_max)
         begin
           error_reg_en     = 1'b1;       // Check the wb_error bit
@@ -886,7 +884,7 @@ module adbg_axi_module
          addr_ct_en = 1'b1;  // Increment thte address counter
          top_inhibit_o = 1'b1;    // in case of early termination
       end
-      
+
       STATE_Wcrc:
       begin
          bit_ct_en = 1'b1;
@@ -894,7 +892,7 @@ module adbg_axi_module
          if(module_next_state == STATE_Wmatch)
             tdo_output_sel = 2'h2;  // This is when the 'match' bit is actually read
       end
-      
+
       STATE_Wmatch:
       begin
          tdo_output_sel = 2'h2;

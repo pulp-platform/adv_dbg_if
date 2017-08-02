@@ -144,7 +144,7 @@ module adbg_axionly_top
    ///////////////////////////////////////
    // Combinatorial assignments
 
-   assign tdo_cpu = 1'b0;  //FIXME ANTONIO, THIS SIGNAL WAS UNDRIVEN BUT IT IS ASSIGNED on ROW 276
+    assign tdo_cpu = 1'b0;
 
     assign select_cmd   = input_shift_reg[`DBG_TOP_MODULE_DATA_LEN-1];
     assign module_id_in = input_shift_reg[`DBG_TOP_MODULE_DATA_LEN-2:`DBG_TOP_MODULE_DATA_LEN-6];
