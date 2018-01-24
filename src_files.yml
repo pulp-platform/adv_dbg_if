@@ -5,6 +5,8 @@ adv_dbg_if:
   files: [
     rtl/adbg_axi_biu.sv,
     rtl/adbg_axi_module.sv,
+    rtl/adbg_lint_biu.sv,
+    rtl/adbg_lint_module.sv,
     rtl/adbg_crc32.v,
     rtl/adbg_or1k_biu.sv,
     rtl/adbg_or1k_module.sv,
@@ -16,4 +18,5 @@ adv_dbg_if:
     rtl/adbg_tap_top.v,
     rtl/adv_dbg_if.sv,
     rtl/adbg_axionly_top.sv,
+    rtl/adbg_lintonly_top.sv,
   ]

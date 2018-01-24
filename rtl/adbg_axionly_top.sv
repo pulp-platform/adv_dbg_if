@@ -144,6 +144,8 @@ module adbg_axionly_top
    ///////////////////////////////////////
    // Combinatorial assignments
 
+    assign tdo_cpu = 1'b0;
+
     assign select_cmd   = input_shift_reg[`DBG_TOP_MODULE_DATA_LEN-1];
     assign module_id_in = input_shift_reg[`DBG_TOP_MODULE_DATA_LEN-2:`DBG_TOP_MODULE_DATA_LEN-6];
 
@@ -266,14 +268,14 @@ end
     /////////////////////////////////////////////////
     // TDO output MUX
 
-    always @ (module_id_reg or tdo_axi or tdo_cpu)
+    always_comb //@ (module_id_reg or tdo_axi or tdo_cpu)
     begin
         if (module_id_reg == 0)
-            tdo_o <= tdo_axi;
+            tdo_o = tdo_axi;
         else if (module_id_reg == 1)
-            tdo_o <= tdo_cpu;
+            tdo_o = tdo_cpu;
         else
-            tdo_o <= 1'b0;
+            tdo_o = 1'b0;
     end
 
 
