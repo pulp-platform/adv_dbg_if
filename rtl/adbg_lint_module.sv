@@ -1,17 +1,12 @@
-/* Copyright (C) 2017 ETH Zurich, University of Bologna
- * All rights reserved.
- *
- * This code is under development and not yet released to the public.
- * Until it is released, the code is under the copyright of ETH Zurich and
- * the University of Bologna, and may contain confidential and/or unpublished
- * work. Any reuse/redistribution is strictly forbidden without written
- * permission from ETH Zurich.
- *
- * Bug fixes and contributions will eventually be released under the
- * SolderPad open hardware license in the context of the PULP platform
- * (http://www.pulp-platform.org), under the copyright of ETH Zurich and the
- * University of Bologna.
- */
+// Copyright 2018 ETH Zurich and University of Bologna.
+// Copyright and related rights are licensed under the Solderpad Hardware
+// License, Version 0.51 (the "License"); you may not use this file except in
+// compliance with the License.  You may obtain a copy of the License at
+// http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
+// or agreed to in writing, software, hardware and materials distributed under
+// this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations under the License.
 
 `include "adbg_defines.v"
 `include "adbg_lint_defines.v"
@@ -95,7 +90,7 @@ module adbg_lint_module
    wire                               module_cmd;              // inverse of MSB of data_register_i. 1 means current cmd not for top level (but is for us)
    wire                               biu_ready;               // indicates that the BIU has finished the last command
    wire                               biu_err;                 // indicates wishbone error during BIU transaction
-   wire                               burst_read;              // True when the input_data_i reg has a valid burst read  instruction for this module 
+   wire                               burst_read;              // True when the input_data_i reg has a valid burst read  instruction for this module
    wire                               burst_write;             // True when the input_data_i reg has a valid burst write instruction for this module
    wire                               intreg_instruction;      // True when the input_data_i reg has a valid internal register instruction
    wire                               intreg_write;            // True when the input_data_i reg has an internal register write op
@@ -124,7 +119,7 @@ module adbg_lint_module
    wire                               biu_rst;                 // logical OR of rst_i and biu_clr_err
 
    enum logic [3:0] {STATE_idle,STATE_Rbegin,STATE_Rready,STATE_Rstatus,STATE_Rburst,STATE_Wready,STATE_Wwait,STATE_Wburst,STATE_Wstatus,STATE_Rcrc,STATE_Wcrc,STATE_Wmatch} module_state,module_next_state;
-   
+
    /////////////////////////////////////////////////
    // Combinatorial assignments
 
@@ -145,15 +140,15 @@ module adbg_lint_module
 
    assign intreg_write = (operation_in == `DBG_LINT_CMD_IREG_WR);
 
-   assign burst_write =  (operation_in == `DBG_LINT_CMD_BWRITE8)  | 
-                         (operation_in == `DBG_LINT_CMD_BWRITE16) | 
-                         (operation_in == `DBG_LINT_CMD_BWRITE32) | 
-                         (operation_in == `DBG_LINT_CMD_BWRITE64); 
+   assign burst_write =  (operation_in == `DBG_LINT_CMD_BWRITE8)  |
+                         (operation_in == `DBG_LINT_CMD_BWRITE16) |
+                         (operation_in == `DBG_LINT_CMD_BWRITE32) |
+                         (operation_in == `DBG_LINT_CMD_BWRITE64);
 
-   assign burst_read  =  (operation_in == `DBG_LINT_CMD_BREAD8)  | 
-                         (operation_in == `DBG_LINT_CMD_BREAD16) | 
-                         (operation_in == `DBG_LINT_CMD_BREAD32) | 
-                         (operation_in == `DBG_LINT_CMD_BREAD64); 
+   assign burst_read  =  (operation_in == `DBG_LINT_CMD_BREAD8)  |
+                         (operation_in == `DBG_LINT_CMD_BREAD16) |
+                         (operation_in == `DBG_LINT_CMD_BREAD32) |
+                         (operation_in == `DBG_LINT_CMD_BREAD64);
 
    // This is decoded from the registered operation
    always @ (operation)
@@ -200,19 +195,19 @@ module adbg_lint_module
            word_size_bits <= 6'd31;  // Bits is actually bits-1, to make the FSM easier
            word_size_bytes <= 4'd4;
            rd_op <= 1'b1;
-        end        
+        end
           `DBG_LINT_CMD_BREAD64:
         begin
            word_size_bits <= 6'd63;  // Bits is actually bits-1, to make the FSM easier
            word_size_bytes <= 4'd4;
            rd_op <= 1'b1;
-        end        
+        end
           default:
          begin
             word_size_bits <= 6'hXX;
            word_size_bytes <= 4'hX;
            rd_op <= 1'bX;
-        end       
+        end
     endcase
      end
 
@@ -223,9 +218,9 @@ module adbg_lint_module
 
     always @ (posedge tck_i or negedge trstn_i)
     begin
-        if(~trstn_i) 
+        if(~trstn_i)
             internal_register_select = 1'h0;
-        else if (regsel_ld_en) 
+        else if (regsel_ld_en)
             internal_register_select = reg_select_data;
     end
 
@@ -233,12 +228,12 @@ module adbg_lint_module
    // register.  However, to make the module expandable, it is included anyway.
    always @ (internal_register_select or internal_reg_error)
      begin
-    case(internal_register_select) 
+    case(internal_register_select)
           `DBG_LINT_INTREG_ERROR: data_from_internal_reg = internal_reg_error;
           default: data_from_internal_reg = internal_reg_error;
     endcase
      end
-   
+
 
 
    ////////////////////////////////////////////////////////////////////
@@ -249,27 +244,27 @@ module adbg_lint_module
    // This is the bus error register, which traps WB errors
    // We latch every new BIU address in the upper 32 bits, so we always have the address for the transaction which
    // generated the error (the address counter might increment, esp. for writes)
-   // We stop latching addresses when the error bit (bit 0) is set. Keep the error bit set until it is 
+   // We stop latching addresses when the error bit (bit 0) is set. Keep the error bit set until it is
    // manually cleared by a module internal register write.
-   // Note we use reg_select_data straight from data_register_i, rather than the latched version - 
+   // Note we use reg_select_data straight from data_register_i, rather than the latched version -
    // otherwise, we would write the previously selected register.
 
 
     always @ (posedge tck_i or negedge trstn_i)
     begin
-        if(~trstn_i) 
+        if(~trstn_i)
             internal_reg_error = 33'h0;
         else if(intreg_ld_en && (reg_select_data == `DBG_LINT_INTREG_ERROR))  // do load from data input register
         begin
-            if(data_register_i[46]) 
+            if(data_register_i[46])
                 internal_reg_error[0] = 1'b0;  // if write data is 1, reset the error bit
         end
         else if(error_reg_en && !internal_reg_error[0])
         begin
-            if(biu_err || (!biu_ready))  internal_reg_error[0] = 1'b1;        
+            if(biu_err || (!biu_ready))  internal_reg_error[0] = 1'b1;
              else if(biu_strobe) internal_reg_error[32:1] = address_counter;
         end
-        else if(biu_strobe && !internal_reg_error[0]) 
+        else if(biu_strobe && !internal_reg_error[0])
             internal_reg_error[32:1] = address_counter;  // When no error, latch this whether error_reg_en or not
         end
 
@@ -357,7 +352,7 @@ module adbg_lint_module
    ////////////////////////////////////////
      // Bus Interface Unit
    // It is assumed that the BIU has internal registers, and will
-   // latch address, operation, and write data on rising clock edge 
+   // latch address, operation, and write data on rising clock edge
    // when strobe is asserted
 
    //assign biu_rst = trstn_i & ~biu_clr_err;  //TODO need to have a better way to clear BIU
@@ -403,7 +398,7 @@ module adbg_lint_module
 
    adbg_crc32 lint_crc_i
      (
-      .clk(tck_i), 
+      .clk(tck_i),
       .data(crc_data_in),
       .enable(crc_en),
       .shift(crc_shift_en),
@@ -440,9 +435,9 @@ module adbg_lint_module
     case(module_state)
        STATE_idle:
         begin
-           if(module_cmd && module_select_i && update_dr_i && burst_read) 
+           if(module_cmd && module_select_i && update_dr_i && burst_read)
                 module_next_state <= STATE_Rbegin;
-           else if(module_cmd && module_select_i && update_dr_i && burst_write) 
+           else if(module_cmd && module_select_i && update_dr_i && burst_write)
                 module_next_state <= STATE_Wready;
            else module_next_state <= STATE_idle;
         end
@@ -459,13 +454,13 @@ module adbg_lint_module
         end
        STATE_Rstatus:
         begin
-           if(update_dr_i) module_next_state <= STATE_idle; 
+           if(update_dr_i) module_next_state <= STATE_idle;
            else if (biu_ready) module_next_state <= STATE_Rburst;
            else module_next_state <= STATE_Rstatus;
         end
        STATE_Rburst:
         begin
-           if(update_dr_i) module_next_state <= STATE_idle; 
+           if(update_dr_i) module_next_state <= STATE_idle;
            else if(bit_count_max && word_count_zero) module_next_state <= STATE_Rcrc;
            else module_next_state <= STATE_Rburst;
         end
@@ -473,7 +468,7 @@ module adbg_lint_module
         begin
            if(update_dr_i) module_next_state <= STATE_idle;
            // This doubles as the 'recovery' state, so stay here until update_dr_i.
-           else module_next_state <= STATE_Rcrc;    
+           else module_next_state <= STATE_Rcrc;
         end
 
        STATE_Wready:
@@ -500,26 +495,26 @@ module adbg_lint_module
         end
        STATE_Wstatus:
         begin
-           if(update_dr_i)  module_next_state <= STATE_idle;  // client terminated early    
+           if(update_dr_i)  module_next_state <= STATE_idle;  // client terminated early
            else if(word_count_zero) module_next_state <= STATE_Wcrc;
            // can't wait until bus ready if multiple devices in chain...
            // Would have to read postfix_bits, then send another start bit and push it through
            // prefix_bits...potentially very inefficient.
            else module_next_state <= STATE_Wburst;
         end
-      
+
        STATE_Wcrc:
         begin
            if(update_dr_i)  module_next_state <= STATE_idle;  // client terminated early
            else if(bit_count_32) module_next_state <= STATE_Wmatch;
-           else module_next_state <= STATE_Wcrc;    
+           else module_next_state <= STATE_Wcrc;
         end
-      
+
        STATE_Wmatch:
         begin
            if(update_dr_i)  module_next_state <= STATE_idle;
            // This doubles as our recovery state, stay here until update_dr_i
-           else module_next_state <= STATE_Wmatch;    
+           else module_next_state <= STATE_Wmatch;
         end
 
       default: module_next_state <= STATE_idle;  // shouldn't actually happen...
@@ -529,7 +524,7 @@ module adbg_lint_module
 
    // Outputs of state machine, pure combinatorial
    always @ (module_state or module_next_state or module_select_i or update_dr_i or capture_dr_i or shift_dr_i or operation_in[2]
-         or word_count_zero or bit_count_max or data_register_i[52] or biu_ready or intreg_instruction or module_cmd 
+         or word_count_zero or bit_count_max or data_register_i[52] or biu_ready or intreg_instruction or module_cmd
          or intreg_write or decremented_word_count)
      begin
     // Default everything to 0, keeps the case statement simple
@@ -560,25 +555,25 @@ module adbg_lint_module
         begin
             addr_sel <= 1'b0;
             word_ct_sel <= 1'b0;
-           
+
             // Operations for internal registers - stay in idle state
-            if(module_select_i & shift_dr_i) 
+            if(module_select_i & shift_dr_i)
                 out_reg_shift_en <= 1'b1; // For module regs
-            if(module_select_i & capture_dr_i) 
+            if(module_select_i & capture_dr_i)
             begin
                 out_reg_data_sel <= 1'b1;  // select internal register data
                 out_reg_ld_en <= 1'b1;   // For module regs
             end
-            if(module_select_i & module_cmd & update_dr_i) 
+            if(module_select_i & module_cmd & update_dr_i)
             begin
-                if(intreg_instruction) 
+                if(intreg_instruction)
                     regsel_ld_en <= 1'b1;  // For module regs
-                if(intreg_write)       
+                if(intreg_write)
                     intreg_ld_en <= 1'b1;  // For module regs
             end
-           
+
             // Burst operations
-            if(module_next_state != STATE_idle) 
+            if(module_next_state != STATE_idle)
             begin  // Do the same to receive read or write opcode
                 addr_ct_en <= 1'b1;
                 op_reg_en <= 1'b1;
@@ -599,12 +594,12 @@ module adbg_lint_module
 
       STATE_Rready:
         ; // Just a wait state
-      
+
       STATE_Rstatus:
         begin
            tdo_output_sel <= 2'h0;
            top_inhibit_o <= 1'b1;    // in case of early termination
-           
+
            if (module_next_state == STATE_Rburst) begin
           error_reg_en <= 1'b1;       // Check the wb_error bit
           out_reg_data_sel <= 1'b0;  // select BIU data
@@ -628,7 +623,7 @@ module adbg_lint_module
            crc_en <= 1'b1;
            crc_in_sel <= 1'b0;  // read data in output shift register LSB (tdo)
            top_inhibit_o <= 1'b1;  // in case of early termination
-           
+
            if(bit_count_max)
            begin
              error_reg_en <= 1'b1;       // Check the wb_error bit
@@ -679,8 +674,8 @@ module adbg_lint_module
            crc_in_sel <= 1'b1;  // read data from tdi_i
            top_inhibit_o <= 1'b1;    // in case of early termination
 
-           // It would be better to do this in STATE_Wstatus, but we don't use that state 
-           // if ADBG_USE_HISPEED is defined.  
+           // It would be better to do this in STATE_Wstatus, but we don't use that state
+           // if ADBG_USE_HISPEED is defined.
            if(bit_count_max)
               begin
               error_reg_en <= 1'b1;       // Check the wb_error bit
@@ -708,19 +703,19 @@ module adbg_lint_module
            addr_ct_en <= 1'b1;  // Increment thte address counter
            top_inhibit_o <= 1'b1;    // in case of early termination
         end
-      
+
       STATE_Wcrc:
         begin
            bit_ct_en <= 1'b1;
            top_inhibit_o <= 1'b1;    // in case of early termination
            if(module_next_state == STATE_Wmatch) tdo_output_sel <= 2'h2;  // This is when the 'match' bit is actually read
         end
-      
+
       STATE_Wmatch:
         begin
            tdo_output_sel <= 2'h2;
            top_inhibit_o <= 1'b1;
-           // Bit of a hack here...an error on the final write won't be detected in STATE_Wstatus like the rest, 
+           // Bit of a hack here...an error on the final write won't be detected in STATE_Wstatus like the rest,
            // so we assume the bus transaction is done and check it / latch it into the error register here.
            if(module_next_state == STATE_idle) error_reg_en <= 1'b1;
         end

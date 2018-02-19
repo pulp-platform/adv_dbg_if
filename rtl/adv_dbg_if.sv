@@ -1,19 +1,14 @@
-/* Copyright (C) 2017 ETH Zurich, University of Bologna
- * All rights reserved.
- *
- * This code is under development and not yet released to the public.
- * Until it is released, the code is under the copyright of ETH Zurich and
- * the University of Bologna, and may contain confidential and/or unpublished
- * work. Any reuse/redistribution is strictly forbidden without written
- * permission from ETH Zurich.
- *
- * Bug fixes and contributions will eventually be released under the
- * SolderPad open hardware license in the context of the PULP platform
- * (http://www.pulp-platform.org), under the copyright of ETH Zurich and the
- * University of Bologna.
- */
+// Copyright 2018 ETH Zurich and University of Bologna.
+// Copyright and related rights are licensed under the Solderpad Hardware
+// License, Version 0.51 (the "License"); you may not use this file except in
+// compliance with the License.  You may obtain a copy of the License at
+// http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
+// or agreed to in writing, software, hardware and materials distributed under
+// this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations under the License.
 
-module adv_dbg_if 
+module adv_dbg_if
     #(
         parameter NB_CORES       = 4,
         parameter AXI_ADDR_WIDTH = 32,
@@ -21,19 +16,19 @@ module adv_dbg_if
         parameter AXI_USER_WIDTH = 6,
         parameter AXI_ID_WIDTH   = 3
     ) (
-       input  logic                    tms_pad_i, 
-       input  logic                    tck_pad_i, 
-       input  logic                    trstn_pad_i, 
-       input  logic                    tdi_pad_i, 
-       output logic                    tdo_pad_o, 
+       input  logic                    tms_pad_i,
+       input  logic                    tck_pad_i,
+       input  logic                    trstn_pad_i,
+       input  logic                    tdi_pad_i,
+       output logic                    tdo_pad_o,
        output logic                    tdo_padoe_o,
 
        input  logic                    test_mode_i,
 
         // CPU signals
         input  logic [NB_CORES-1:0]        cpu_clk_i,
-        output logic [NB_CORES-1:0] [15:0] cpu_addr_o, 
-        input  logic [NB_CORES-1:0] [31:0] cpu_data_i, 
+        output logic [NB_CORES-1:0] [15:0] cpu_addr_o,
+        input  logic [NB_CORES-1:0] [31:0] cpu_data_i,
         output logic [NB_CORES-1:0] [31:0] cpu_data_o,
         input  logic [NB_CORES-1:0]        cpu_bp_i,
         output logic [NB_CORES-1:0]        cpu_stall_o,
@@ -41,7 +36,7 @@ module adv_dbg_if
         output logic [NB_CORES-1:0]        cpu_we_o,
         input  logic [NB_CORES-1:0]        cpu_ack_i,
         output logic [NB_CORES-1:0]        cpu_rst_o,
-		
+
 		// AXI4 MASTER
 		//***************************************
 		input  logic                        axi_aclk,
@@ -60,7 +55,7 @@ module adv_dbg_if
 		output logic [AXI_ID_WIDTH-1:0]     axi_master_aw_id,
 		output logic [AXI_USER_WIDTH-1:0]   axi_master_aw_user,
 		input  logic                        axi_master_aw_ready,
-    
+
 		// READ ADDRESS CHANNEL
 		output logic                        axi_master_ar_valid,
 		output logic [AXI_ADDR_WIDTH-1:0]   axi_master_ar_addr,
@@ -75,7 +70,7 @@ module adv_dbg_if
 		output logic [AXI_ID_WIDTH-1:0]     axi_master_ar_id,
 		output logic [AXI_USER_WIDTH-1:0]   axi_master_ar_user,
 		input  logic                        axi_master_ar_ready,
-    
+
 		// WRITE DATA CHANNEL
 		output logic                        axi_master_w_valid,
 		output logic [AXI_DATA_WIDTH-1:0]   axi_master_w_data,
@@ -83,7 +78,7 @@ module adv_dbg_if
 		output logic [AXI_USER_WIDTH-1:0]   axi_master_w_user,
 		output logic                        axi_master_w_last,
 		input  logic                        axi_master_w_ready,
-    
+
 		// READ DATA CHANNEL
 		input  logic                        axi_master_r_valid,
 		input  logic [AXI_DATA_WIDTH-1:0]   axi_master_r_data,
@@ -92,8 +87,8 @@ module adv_dbg_if
 		input  logic [AXI_ID_WIDTH-1:0]     axi_master_r_id,
 		input  logic [AXI_USER_WIDTH-1:0]   axi_master_r_user,
 		output logic                        axi_master_r_ready,
-                                            
-		// WRITE RESPONSE CHANNEL           
+
+		// WRITE RESPONSE CHANNEL
 		input  logic                        axi_master_b_valid,
 		input  logic [1:0]                  axi_master_b_resp,
 		input  logic [AXI_ID_WIDTH-1:0]     axi_master_b_id,
@@ -116,11 +111,11 @@ module adv_dbg_if
 
     adbg_tap_top cluster_tap_i (
                 // JTAG pads
-                .tms_pad_i(tms_pad_i), 
-                .tck_pad_i(tck_pad_i), 
-                .trstn_pad_i(trstn_pad_i), 
-                .tdi_pad_i(tdi_pad_i), 
-                .tdo_pad_o(tdo_pad_o), 
+                .tms_pad_i(tms_pad_i),
+                .tck_pad_i(tck_pad_i),
+                .trstn_pad_i(trstn_pad_i),
+                .tdi_pad_i(tdi_pad_i),
+                .tdo_pad_o(tdo_pad_o),
                 .tdo_padoe_o(tdo_padoe_o),
 
                 .test_mode_i(test_mode_i),
@@ -129,19 +124,19 @@ module adv_dbg_if
 				.test_logic_reset_o(s_test_logic_reset),
 				.run_test_idle_o(s_run_test_idle),
                 .shift_dr_o(s_shift_dr),
-                .pause_dr_o(s_pause_dr), 
+                .pause_dr_o(s_pause_dr),
                 .update_dr_o(s_update_dr),
                 .capture_dr_o(s_capture_dr),
-                
+
                 // Select signals for boundary scan or mbist
-                .extest_select_o(s_extest_select), 
+                .extest_select_o(s_extest_select),
                 .sample_preload_select_o(s_sample_preload_select),
                 .mbist_select_o(s_mbist_select),
                 .debug_select_o(s_debug_select),
-                
+
                 // TDO signal that is connected to TDI of sub-modules.
-                .tdi_o(s_tdi), 
-                
+                .tdi_o(s_tdi),
+
                 // TDI signals from sub-modules
                 .debug_tdo_i(s_debug_tdo),    // from debug module
                 .bs_chain_tdo_i(1'b0), // from Boundary Scan Chain
@@ -173,7 +168,7 @@ adbg_top #(
                 .debug_select_i(s_debug_select),
 
                 // CPU signals
-                .cpu_addr_o(cpu_addr_o), 
+                .cpu_addr_o(cpu_addr_o),
                 .cpu_data_i(cpu_data_i),
                 .cpu_data_o(cpu_data_o),
                 .cpu_bp_i(cpu_bp_i),
