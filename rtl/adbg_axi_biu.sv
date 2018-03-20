@@ -526,8 +526,10 @@ module adbg_axi_biu
       end
       S_AXIADDR:
       begin
-        if (wr_reg)
+        if (wr_reg) begin
           axi_master_aw_valid = 1'b1;
+          axi_master_w_valid  = 1'b1;
+        end
         else
           axi_master_ar_valid = 1'b1;
         if (wr_reg && axi_master_aw_ready)
