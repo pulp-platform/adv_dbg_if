@@ -532,8 +532,10 @@ module adbg_axi_biu
         end
         else
           axi_master_ar_valid = 1'b1;
-        if (wr_reg && axi_master_aw_ready)
+        if (wr_reg && axi_master_aw_ready && !axi_master_w_ready)
           next_fsm_state = S_AXIDATA;
+        else if (wr_reg && axi_master_aw_ready && axi_master_w_ready)
+          next_fsm_state = S_AXIRESP;
         else if (!wr_reg && axi_master_ar_ready)
           next_fsm_state = S_AXIRESP;
       end
