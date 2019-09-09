@@ -20,3 +20,18 @@ adv_dbg_if:
     rtl/adbg_axionly_top.sv,
     rtl/adbg_lintonly_top.sv,
   ]
+  jg_slint_top_name: [
+    adbg_top
+  ]
+  jg_slint_elab_opt: [    
+  ]
+  jg_slint_postelab_cmds: [
+  ]
+  jg_slint_clocks: [
+    tck_i,
+    axi_aclk,    
+  ]
+  jg_slint_resets: [
+    ~trstn_i,
+    ~axi_aresetn,
+  ]
