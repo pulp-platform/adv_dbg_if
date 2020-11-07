@@ -1,0 +1,29 @@
+package: 
+  name: adv_dbg_if
+  authors: 
+    - "Antonio Pullini <pullinia@iis.ee.ethz.ch>"
+    - "Andreas Traber <andytraber@gmail.com>"
+    - "Francesco Conti <f.conti@unibo.it>"
+    - "Pasquale Davide Schiavone <pschiavo@iis.ee.ethz.ch>"
+    - "Florent Rotenberg <florent.rotenberg@greenwaves-technologies.com>"
+
+sources:
+  - include_dirs:
+      - rtl
+    files:
+      - rtl/adbg_axi_biu.sv,
+      - rtl/adbg_axi_module.sv
+      - rtl/adbg_lint_biu.sv
+      - rtl/adbg_lint_module.sv
+      - rtl/adbg_crc32.v
+      - rtl/adbg_or1k_biu.sv
+      - rtl/adbg_or1k_module.sv
+      - rtl/adbg_or1k_status_reg.sv
+      - rtl/adbg_top.sv
+      - rtl/bytefifo.v
+      - rtl/syncflop.v
+      - rtl/syncreg.v
+      - rtl/adbg_tap_top.v
+      - rtl/adv_dbg_if.sv
+      - rtl/adbg_axionly_top.sv
+      - rtl/adbg_lintonly_top.sv
