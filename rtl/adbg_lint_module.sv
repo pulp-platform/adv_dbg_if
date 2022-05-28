@@ -253,19 +253,19 @@ module adbg_lint_module
     always @ (posedge tck_i or negedge trstn_i)
     begin
         if(~trstn_i)
-            internal_reg_error = 33'h0;
+            internal_reg_error <= 33'h0;
         else if(intreg_ld_en && (reg_select_data == `DBG_LINT_INTREG_ERROR))  // do load from data input register
         begin
             if(data_register_i[46])
-                internal_reg_error[0] = 1'b0;  // if write data is 1, reset the error bit
+                internal_reg_error[0] <= 1'b0;  // if write data is 1, reset the error bit
         end
         else if(error_reg_en && !internal_reg_error[0])
         begin
-            if(biu_err || (!biu_ready))  internal_reg_error[0] = 1'b1;
-             else if(biu_strobe) internal_reg_error[32:1] = address_counter;
+            if(biu_err || (!biu_ready))  internal_reg_error[0] <= 1'b1;
+             else if(biu_strobe) internal_reg_error[32:1] <= address_counter;
         end
         else if(biu_strobe && !internal_reg_error[0])
-            internal_reg_error[32:1] = address_counter;  // When no error, latch this whether error_reg_en or not
+            internal_reg_error[32:1] <= address_counter;  // When no error, latch this whether error_reg_en or not
         end
 
    ///////////////////////////////////////////////
