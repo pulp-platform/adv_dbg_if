@@ -152,6 +152,10 @@ end
 
     assign select_inhibit = | module_inhibit;
 
+    // used to be 2 bits (axi + cpu)
+    assign module_inhibit[1] = 1'b0;
+    assign tdo_cpu = 1'b0;
+
     /////////////////////////////////////////////////
     // TDO output MUX
 
