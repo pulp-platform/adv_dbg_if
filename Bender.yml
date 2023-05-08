@@ -11,7 +11,7 @@ sources:
   - include_dirs:
       - rtl
     files:
-      - rtl/adbg_axi_biu.sv,
+      - rtl/adbg_axi_biu.sv
       - rtl/adbg_axi_module.sv
       - rtl/adbg_lint_biu.sv
       - rtl/adbg_lint_module.sv
