@@ -273,6 +273,8 @@ module adbg_lint_biu
     end
   end
 
+// reset to 1 is not well supported (with some good reason) by verilator
+`ifndef VERILATOR
   always_ff @(posedge tck_i, negedge trstn_i)
   begin
     if(~trstn_i) begin
@@ -286,6 +288,23 @@ module adbg_lint_biu
         rdy_o <= 1'b1;
     end
   end
+`else
+  logic rdy_n;
+  always_ff @(posedge tck_i, negedge trstn_i)
+  begin
+    if(~trstn_i) begin
+      rdy_n <= 1'b0;
+    end
+    else
+    begin
+      if(strobe_i && ~rdy_n)
+        rdy_n <= 1'b1;
+      else if(rdy_sync_tff2 != rdy_sync_tff2q)
+        rdy_n <= 1'b0;
+    end
+  end
+  assign rdy_o = ~rdy_n;
+`endif
 
   //////////////////////////////////////////////////////////
   // Direct assignments, unsynchronized
